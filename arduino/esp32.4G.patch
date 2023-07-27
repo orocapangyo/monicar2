@@ -1,0 +1,10 @@
+diff --git a/arduino/esp32sNodemcu.rules b/arduino/esp32sNodemcu.rules
+index 89a3ffc..f081093 100644
+--- a/arduino/esp32sNodemcu.rules
++++ b/arduino/esp32sNodemcu.rules
+@@ -1,4 +1,4 @@
+ # set the udev rule , make the device_port be fixed by ESP32S NodeMCU
+ # Jetson 2G, separate port
+-KERNEL=="ttyUSB*", ATTRS{devpath}=="2", ATTRS{idProduct}=="ea60", ATTRS{idVendor}=="10c4", MODE:="0777", SYMLINK+="esp32Nodemcu"
++KERNEL=="ttyUSB*", ATTRS{devpath}=="2.2", ATTRS{idProduct}=="ea60", ATTRS{idVendor}=="10c4", MODE:="0777", SYMLINK+="esp32Nodemcu"
+ 

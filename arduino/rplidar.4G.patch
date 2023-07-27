@@ -1,0 +1,9 @@
+diff --git a/arduino/rplidar.rules b/arduino/rplidar.rules
+index d4222ed..4ee45fc 100644
+--- a/arduino/rplidar.rules
++++ b/arduino/rplidar.rules
+@@ -1,3 +1,3 @@
+ # set the udev rule , make the device_port be fixed by rplidar
+ # USB HUB, 5'th port
+-KERNEL=="ttyUSB*", ATTRS{devpath}=="3*", ATTRS{idProduct}=="ea60", ATTRS{idVendor}=="10c4" ,MODE:="0777", SYMLINK+="rplidar"
++KERNEL=="ttyUSB*", ATTRS{devpath}=="2.4", ATTRS{idProduct}=="ea60", ATTRS{idVendor}=="10c4" ,MODE:="0777", SYMLINK+="rplidar"
