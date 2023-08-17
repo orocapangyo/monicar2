@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-
 # Author: Bishop Pearson
-
 import os
 
 from ament_index_python.packages import get_package_share_directory

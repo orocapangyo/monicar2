@@ -4,7 +4,7 @@
   <name>monicar2</name>
   <version>0.0.1</version>
   <description>
-    ROS 2 packages for OMORobot R1 Mini
+    ROS 2 packages for monicar2
   </description>
   <license>Apache 2.0</license>
   <url type="repository">https://github.com/bishopearson/monicar2</url>
@@ -15,7 +15,6 @@
   <exec_depend>monicar2_cartographer</exec_depend>
   <exec_depend>monicar2_description</exec_depend>
   <exec_depend>monicar2_navigation2</exec_depend>
-  <!-- <exec_depend>monicar2_node</exec_depend> -->
   <exec_depend>monicar2_teleop</exec_depend>
   <export>
     <build_type>ament_cmake</build_type>
