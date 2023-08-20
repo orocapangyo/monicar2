@@ -12,18 +12,20 @@
  * MPU6050_DMP6_ESPWiFi.ino
  * https://github.com/soarbear/mpu6050_imu_ros
  */
-#include <ros.h>
-#include <std_msgs/Int16.h>
-#include <std_msgs/Float32.h>
-#include <geometry_msgs/Twist.h>
-#include <PID_v1.h>
+#include <micro_ros_arduino.h>
 
-#include <geometry_msgs/Twist.h>
-#include <ros/time.h>
-#include <geometry_msgs/Quaternion.h>
+#include <stdio.h>
+#include <rcl/rcl.h>
+#include <rcl/error_handling.h>
+#include <rclc/rclc.h>
+#include <rclc/executor.h>
+#include <std_msgs/msg/int32.h>
+#include <std_msgs/msg/float32.h>
+#include <geometry_msgs/msg/twist.h>
+#include <PID_v1.h>
+#include <geometry_msgs/msg/quaternion.h>
 
 #define USE_IMU 1
-
 #if USE_IMU == 1
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
@@ -35,21 +37,23 @@
 #endif
 #endif
 
-#define OLED 0
-#if OLED == 1
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+rcl_publisher_t left_pub, right_pub, quat_pub;
+rcl_subscription_t cmd_vel_sub, ledSub;
+std_msgs__msg__Int32 right_wheel_tick_count;
+std_msgs__msg__Int32 left_wheel_tick_count;
+geometry_msgs__msg__Twist cmd_vel;
+std_msgs__msg__Int32 ledMsg;
+geometry_msgs__msg__Quaternion quat_msg;
 
-#define SCREEN_WIDTH 128  // OLED width,  in pixels
-#define SCREEN_HEIGHT 64  // OLED height, in pixels
-// create an OLED display object connected to I2C
-Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
-#endif
+rclc_executor_t executor;
+rclc_support_t support;
+rcl_allocator_t allocator;
+rcl_node_t node;
 
 #define RXD2 16
 #define TXD2 17
 
-#define DEBUG 0
+#define DEBUG 1
 #if (DEBUG == 1)
 #define DEBUG_PRINT(x) Serial2.print(x)
 #define DEBUG_PRINTLN(x) Serial2.println(x)
@@ -58,12 +62,6 @@ Adafruit_SSD1306 oled(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 #define DEBUG_PRINTLN(x)
 #endif
 
-#define PWM_PARAM 0  //PWM parameter via yaml
-#define PUB_VEL 0    //publish velocity for debugging
-#define USE_LED 1    //LED contorl
-
-#define USE_PID 1
-#if USE_PID == 1
 double trackAdjustValueL = 0.0;
 double trackSetpointL = 0.0;
 double trackErrorL = 0.0;
@@ -77,15 +75,8 @@ double Kd = 1.0;   //Determines how aggressively the PID reacts to the change in
 
 PID trackPIDLeft(&trackErrorL, &trackAdjustValueL, &trackSetpointL, Kp, Ki, Kd, DIRECT);
 PID trackPIDRight(&trackErrorR, &trackAdjustValueR, &trackSetpointR, Kp, Ki, Kd, DIRECT);
-#endif
 
-// Handles startup and shutdown of ROS
-ros::NodeHandle nh;
-#if USE_IMU == 1
-geometry_msgs::Quaternion quat_msg;
-ros::Publisher quat_pub("quaternion", &quat_msg);
-#endif
-
+////////////////// Motor Controller Variables and Constants ///////////////////
 // Encoder output to Arduino Interrupt pin. Tracks the tick count.
 #define ENC_IN_LEFT_A 36
 #define ENC_IN_RIGHT_A 34
@@ -95,17 +86,17 @@ ros::Publisher quat_pub("quaternion", &quat_msg);
 #define ENC_IN_RIGHT_B 35
 
 // Motor A connections, Left
-#define enA 32
+#define ENA 32
 // Motor B connections, Right
-#define enB 33
+#define ENB 33
 
 #define ENA_CH 0
 #define ENB_CH 1
 
-#define ain1 26
-#define ain2 25
-#define bin1 27
-#define bin2 14
+#define AIN1 26
+#define AIN2 25
+#define BIN1 27
+#define BIN2 14
 #define STBY 4
 
 // True = Forward; False = Reverse
@@ -133,20 +124,6 @@ enum LEDBEHAV {
   ALL_ON        //all on
 };
 
-////////////////// Tick Data Publishing Variables and Constants ///////////////
-// Keep track of the number of wheel ticks
-std_msgs::Int16 right_wheel_tick_count;
-std_msgs::Int16 left_wheel_tick_count;
-ros::Publisher rightPub("right_ticks", &right_wheel_tick_count);
-ros::Publisher leftPub("left_ticks", &left_wheel_tick_count);
-
-#if PUB_VEL == 1
-std_msgs::Float32 left_vel_pub;
-ros::Publisher leftvelPub("velLeft", &left_vel_pub);
-std_msgs::Float32 right_vel_pub;
-ros::Publisher rightvelPub("velRight", &right_vel_pub);
-#endif
-
 // Time interval for measurements in milliseconds
 const int INTERVAL = 30;
 long previousMillis = 0;
@@ -163,24 +140,11 @@ long currentMillis = 0;
 #define TICKS_PER_METER (TICKS_PER_REVOLUTION / (2.0 * 3.141592 * WHEEL_RADIUS))
 #define WHEEL_BASE (0.160)
 
-#if PWM_PARAM == 1
-// Proportional constant, which was measured by measuring the
-// PWM-Linear Velocity relationship for the robot.
-int K_P = 1125;
-// Y-intercept for the PWM-Linear Velocity relationship for the robot
-int K_b = 4;
-// Turning PWM output (0 = min, 255 = max for PWM values)
-// Set maximum and minimum limits for the PWM values
-int PWM_MIN = 40;   // about x.xxx m/s
-int PWM_MAX = 240;  // about x.xxx m/s
-int K_bias = 5;
-#else
 #define K_P 1125.0
 #define K_b 3.5
 #define PWM_MIN 40.0   // about 0.05 m/s
 #define PWM_MAX 240.0  // about 0.2 m/s
 #define K_bias 5.0     // left is slow, then add this bias
-#endif
 
 #define PWM_TURN (PWM_MIN)
 // How much the PWM value can change each cycle
@@ -197,7 +161,6 @@ int pwmRightReq = 0;
 
 // Record the time that the last velocity command was received
 float lastCmdVelReceived = 0.0;
-bool blinkState = false;
 
 #if USE_IMU == 1
 MPU6050 mpu;
@@ -222,6 +185,27 @@ void ICACHE_RAM_ATTR dmpDataReady() {
   mpuInterrupt = true;
 }
 #endif
+
+#define RCCHECK(fn) \
+  { \
+    rcl_ret_t temp_rc = fn; \
+    if ((temp_rc != RCL_RET_OK)) { \
+      char buffer[40]; \
+      sprintf(buffer, "Failed status on line %d: %d. Aborting.\n", __LINE__, (int)temp_rc); \
+      DEBUG_PRINTLN(buffer); \
+      vTaskDelete(NULL); \
+    } \
+  }
+
+#define RCSOFTCHECK(fn) \
+  { \
+    rcl_ret_t temp_rc = fn; \
+    if ((temp_rc != RCL_RET_OK)) { \
+      char buffer[40]; \
+      sprintf(buffer, "Failed status on line %d: %d. Aborting.\n", __LINE__, (int)temp_rc); \
+      DEBUG_PRINTLN(buffer); \
+    } \
+  }
 
 /////////////////////// Tick Data Publishing Functions ////////////////////////
 // Increment the number of ticks
@@ -298,9 +282,6 @@ void calc_vel_left_wheel() {
 
   // Calculate wheel velocity in meters per second
   velLeftWheel = float(numOfTicks) / TICKS_PER_METER / ((millis() / 1000.0) - prevTime);
-#if PUB_VEL == 1
-  left_vel_pub.data = velLeftWheel;
-#endif
   // Keep track of the previous tick count
   prevLeftCount = left_wheel_tick_count.data;
 
@@ -327,9 +308,6 @@ void calc_vel_right_wheel() {
 
   // Calculate wheel velocity in meters per second
   velRightWheel = float(numOfTicks) / TICKS_PER_METER / ((millis() / 1000.0) - prevTime);
-#if PUB_VEL == 1
-  right_vel_pub.data = velRightWheel;
-#endif
   prevRightCount = right_wheel_tick_count.data;
 
   // Update the timestamp
@@ -337,14 +315,15 @@ void calc_vel_right_wheel() {
 }
 
 // Take the velocity command as input and calculate the PWM values.
-void calc_pwm_values(const geometry_msgs::Twist& cmdVel) {
+void cmd_vel_callback(const void *msgin) {
+  const geometry_msgs__msg__Twist *cmdVel = (const geometry_msgs__msg__Twist *)msgin;
   float vLeft, vRight;
 
   // Record timestamp of last velocity command received
   lastCmdVelReceived = (millis() / 1000.0);
 
-  vLeft = cmdVel.linear.x - cmdVel.angular.z * WHEEL_BASE / 2.0;
-  vRight = cmdVel.linear.x + cmdVel.angular.z * WHEEL_BASE / 2.0;
+  vLeft = cmdVel->linear.x - cmdVel->angular.z * WHEEL_BASE / 2.0;
+  vRight = cmdVel->linear.x + cmdVel->angular.z * WHEEL_BASE / 2.0;
 
   if (vLeft >= 0.0) {
     // Calculate the PWM value given the desired velocity
@@ -367,7 +346,6 @@ void calc_pwm_values(const geometry_msgs::Twist& cmdVel) {
     pwmRightReq = 0;
   }
 
-#if USE_PID == 1
   //reset and start again PID controller
   trackPIDLeft.SetMode(MANUAL);
   trackAdjustValueL = 0.0;
@@ -378,11 +356,9 @@ void calc_pwm_values(const geometry_msgs::Twist& cmdVel) {
   trackAdjustValueR = 0.0;
   trackErrorR = 0.0;
   trackPIDRight.SetMode(AUTOMATIC);
-#endif  //USE_PID
 }
 
 void set_pwm_values() {
-
   // These variables will hold our desired PWM values
   static int pwmLeftOut = 0;
   static int pwmRightOut = 0;
@@ -397,31 +373,31 @@ void set_pwm_values() {
 
   // Set the direction of the motors
   if (pwmLeftReq > 0) {  // Left wheel forward
-    digitalWrite(ain1, HIGH);
-    digitalWrite(ain2, LOW);
+    digitalWrite(AIN1, HIGH);
+    digitalWrite(AIN2, LOW);
   } else if (pwmLeftReq < 0) {  // Left wheel reverse
-    digitalWrite(ain1, LOW);
-    digitalWrite(ain2, HIGH);
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, HIGH);
   } else if (pwmLeftReq == 0 && pwmLeftOut == 0) {  // Left wheel stop
-    digitalWrite(ain1, LOW);
-    digitalWrite(ain2, LOW);
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, LOW);
   } else {  // Left wheel stop
-    digitalWrite(ain1, LOW);
-    digitalWrite(ain2, LOW);
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, LOW);
   }
 
   if (pwmRightReq > 0) {  // Right wheel forward
-    digitalWrite(bin1, HIGH);
-    digitalWrite(bin2, LOW);
+    digitalWrite(BIN1, HIGH);
+    digitalWrite(BIN2, LOW);
   } else if (pwmRightReq < 0) {  // Right wheel reverse
-    digitalWrite(bin1, LOW);
-    digitalWrite(bin2, HIGH);
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, HIGH);
   } else if (pwmRightReq == 0 && pwmRightOut == 0) {  // Right wheel stop
-    digitalWrite(bin1, LOW);
-    digitalWrite(bin2, LOW);
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, LOW);
   } else {  // Right wheel stop
-    digitalWrite(bin1, LOW);
-    digitalWrite(bin2, LOW);
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, LOW);
   }
 
   // Calculate the output PWM value by making slow changes to the current value
@@ -432,14 +408,12 @@ void set_pwm_values() {
 
   } else {
     // reached calculated PWM, then start PID
-#if USE_PID == 1
     // not stop case, run PID
     if (pwmLeftReq != 0) {
       trackErrorL = (velLeftWheel - vLeft) * 100.0;
       if (trackPIDLeft.Compute())  //true if PID has triggered
         pwmLeftOut += trackAdjustValueL;
     }
-#endif
   }
 
   if (abs(pwmRightReq) > pwmRightOut) {
@@ -448,13 +422,12 @@ void set_pwm_values() {
     pwmRightOut -= PWM_INCREMENT;
   } else {
     // reached calculated PWM, then start PID
-#if USE_PID == 1
+
     if (pwmRightReq != 0) {
       trackErrorR = (velRightWheel - vRight) * 100.0;
       if (trackPIDRight.Compute())  //true if PID has triggered
         pwmRightOut += trackAdjustValueR;
     }
-#endif
   }
 
   // Conditional operator to limit PWM output at the maximum
@@ -521,27 +494,23 @@ void RGB(enum LEDBEHAV ledbehav) {
   }
 }
 
-void ledcb(const std_msgs::Int16& msg) {
-  RGB(LEDBEHAV(msg.data));  // set the pin state to the message data
+void subled_callback(const void *msgin) {
+  const std_msgs__msg__Int32 *msg = (const std_msgs__msg__Int32 *)msgin;
+  RGB(LEDBEHAV(msg->data));
 }
-
-// Set up ROS subscriber to the velocity command
-ros::Subscriber<geometry_msgs::Twist> subCmdVel("cmd_vel", &calc_pwm_values);
-ros::Subscriber<std_msgs::Int16> subLed("rgbled", &ledcb);
 
 void setup() {
 #if (DEBUG == 1)
   Serial2.begin(115200);
   Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
 #endif
+  DEBUG_PRINTLN("Enc/Motor/LED/MPU6050 Starts");
 
-#if (PWM_PARAM == 1)
-  int pwm_constants[4];
-  char buf[3];  //for debugging
-#endif
-
-  // configure LED for output
-  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(LED_L, OUTPUT);  // RGB color lights red control pin configuration output
+  pinMode(LED_R, OUTPUT);  // RGB color light green control pin configuration output
+  pinMode(LED_B, OUTPUT);  // RGB color light blue control pin configuration output
+  RGB(ALL_OFF);            // RGB LED all off
+  pinMode(BUZZER, OUTPUT);
 
   // Set pin states of the encoder
   pinMode(ENC_IN_LEFT_A, INPUT_PULLUP);
@@ -553,115 +522,107 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENC_IN_LEFT_A), left_wheel_tick, RISING);
   attachInterrupt(digitalPinToInterrupt(ENC_IN_RIGHT_A), right_wheel_tick, RISING);
 
-  pinMode(ain1, OUTPUT);
-  pinMode(ain2, OUTPUT);
-  pinMode(bin1, OUTPUT);
-  pinMode(bin2, OUTPUT);
+  pinMode(AIN1, OUTPUT);
+  pinMode(AIN2, OUTPUT);
+  pinMode(BIN1, OUTPUT);
+  pinMode(BIN2, OUTPUT);
   pinMode(STBY, OUTPUT);
 
   // Turn off motors - Initial state
-  digitalWrite(ain1, LOW);
-  digitalWrite(ain2, LOW);
-  digitalWrite(bin1, LOW);
-  digitalWrite(bin2, LOW);
+  digitalWrite(AIN1, LOW);
+  digitalWrite(AIN2, LOW);
+  digitalWrite(BIN1, LOW);
+  digitalWrite(BIN2, LOW);
   digitalWrite(STBY, HIGH);
 
-  ledcSetup(ENA_CH, 5000, 8);  //enA, channel: 0, 5000Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENA_CH, 5000, 8);  //ENA, channel: 0, 5000Hz, 8bits = 256(0 ~ 255)
   ledcSetup(ENB_CH, 5000, 8);  //enB, channel: 1, 5000Hz, 8bits = 256(0 ~ 255)
 
-  ledcAttachPin(enA, ENA_CH);
-  ledcAttachPin(enB, ENB_CH);
+  ledcAttachPin(ENA, ENA_CH);
+  ledcAttachPin(ENB, ENB_CH);
 
   // Set the motor speed
   ledcWrite(ENA_CH, 0);
   ledcWrite(ENB_CH, 0);
 
-  DEBUG_PRINTLN("SYSTEM Started");
-
-#if USE_LED == 1
-  pinMode(LED_L, OUTPUT);  // RGB color lights red control pin configuration output
-  pinMode(LED_R, OUTPUT);  // RGB color light green control pin configuration output
-  pinMode(LED_B, OUTPUT);  // RGB color light blue control pin configuration output
-  RGB(ALL_OFF);            // RGB LED all off
-#endif
-
-  pinMode(BUZZER, OUTPUT);
-
-#if USE_IMU == 1
-  mpu_setup();
-#endif
-
-#if (OLED == 1)
-  // initialize OLED display with I2C address 0x3C
-  oled.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-  oled.clearDisplay();           // clear display
-  oled.setTextSize(1);           // set text size
-  oled.setTextColor(WHITE);      // set text color
-  oled.setCursor(0, 0);          // set position to display
-  oled.println("Jessicar II+");  // set text
-  oled.display();                // display on OLED
-#endif
+  // configure LED for output
+  pinMode(LED_BUILTIN, OUTPUT);
 
   // ROS Setup
-  nh.getHardware()->setBaud(115200);
-  nh.initNode();
-  nh.advertise(rightPub);
-  nh.advertise(leftPub);
-  nh.subscribe(subCmdVel);
+  DEBUG_PRINTLN("ROS Starts");
 
-#if USE_IMU == 1
-  nh.advertise(quat_pub);
-#endif
+  set_microros_transports();
+  delay(2000);
 
-#if PUB_VEL == 1
-  nh.advertise(rightvelPub);
-  nh.advertise(leftvelPub);
-#endif
+  allocator = rcl_get_default_allocator();
 
-#if USE_LED == 1
-  nh.subscribe(subLed);
-#endif
+  //create allocator
+  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  DEBUG_PRINTLN("rclc_support_init done");
 
-  while (!nh.connected()) {
-    nh.spinOnce();
-  }
+  rcl_node_options_t node_ops = rcl_node_get_default_options();
+  node_ops.domain_id = 108;
+  RCCHECK(rclc_node_init_with_options(&node, "uros_arduino_node", "", &support, &node_ops));
+  DEBUG_PRINTLN("rclc_node_init done");
 
-  DEBUG_PRINTLN("\nROS connected");
+  // create publisher
+  RCCHECK(rclc_publisher_init_default(
+    &right_pub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    "right_ticks"));
 
-#if PWM_PARAM == 1
-  nh.logwarn("S");
-  if (!nh.getParam("/pwmConstants", pwm_constants, 4)) {
-    nh.logwarn("F");
+  // create publisher
+  RCCHECK(rclc_publisher_init_default(
+    &left_pub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    "left_ticks"));
 
-  } else {
-    K_P = pwm_constants[0];
-    K_b = pwm_constants[1];
-    PWM_MIN = pwm_constants[2];
-    PWM_MAX = pwm_constants[3];
+  // create publisher
+  RCCHECK(rclc_publisher_init_default(
+    &quat_pub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Quaternion),
+    "quaternion"));
 
-    DEBUG_PRINTLN("PWM parameters:");
-    DEBUG_PRINT(K_P);
-    DEBUG_PRINT(",");
-    DEBUG_PRINT(K_b);
-    DEBUG_PRINT(",");
-    DEBUG_PRINT(PWM_MIN);
-    DEBUG_PRINT(",");
-    DEBUG_PRINTLN(PWM_MAX);
-  }
-#endif
+  // create subscriber
+  RCCHECK(rclc_subscription_init_best_effort(
+    &ledSub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    "ledSub"));
 
-#if USE_PID == 1
+  // create cmd_vel subscriber
+  RCCHECK(rclc_subscription_init_best_effort(
+    &cmd_vel_sub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+    "cmd_vel"));
+
+  // create executor
+  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
+  RCCHECK(rclc_executor_add_subscription(&executor, &ledSub, &ledMsg, &subled_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_sub, &cmd_vel, cmd_vel_callback, ON_NEW_DATA));
+
+  DEBUG_PRINTLN("ROS established");
+
   trackPIDLeft.SetMode(AUTOMATIC);
   trackPIDLeft.SetSampleTime(200);
   trackPIDLeft.SetOutputLimits(-20, 20);
   trackPIDRight.SetMode(AUTOMATIC);
   trackPIDRight.SetSampleTime(200);
   trackPIDRight.SetOutputLimits(-20, 20);
+
+#if USE_IMU == 1
+  mpu_setup();
 #endif
+
+  DEBUG_PRINTLN("Done setup");
 }
 
 void loop() {
-  nh.spinOnce();
+  RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10)));
 
   // Record the time
   currentMillis = millis();
@@ -676,23 +637,16 @@ void loop() {
     DEBUG_PRINT(",RT:");
     DEBUG_PRINTLN(int(right_wheel_tick_count.data));
 
-    // Publish tick counts to topics
-    leftPub.publish(&left_wheel_tick_count);
-    rightPub.publish(&right_wheel_tick_count);
-#if PUB_VEL == 1
-    leftvelPub.publish(&left_vel_pub);
-    rightvelPub.publish(&right_vel_pub);
-#endif
     // Calculate the velocity of the right and left wheels
     calc_vel_right_wheel();
     calc_vel_left_wheel();
 
-    // blink LED to indicate activity
-    blinkState = !blinkState;
-    digitalWrite(LED_BUILTIN, blinkState);
+    RCSOFTCHECK(rcl_publish(&left_pub, &left_wheel_tick_count, NULL));
+    RCSOFTCHECK(rcl_publish(&right_pub, &right_wheel_tick_count, NULL));
 
     mpu_loop();
 
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     //buzzer beep if robot move reverse
     if ((velLeftWheel < 0.0) || (velRightWheel < 0.0))
       digitalWrite(BUZZER, HIGH);
@@ -768,14 +722,13 @@ void mpu_setup() {
 void mpu_loop() {
   // if programming failed, don't try to do anything
   if (!dmpReady) return;
-
   // wait for MPU interrupt or extra packet(s) available
   if (!mpuInterrupt) return;
 
   // reset interrupt flag and get INT_STATUS byte
   mpuInterrupt = false;
   mpuIntStatus = mpu.getIntStatus();
-  
+
   if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {  // Get the Latest packet
     // display quaternion values in easy matrix form: w x y z
     mpu.dmpGetQuaternion(&q, fifoBuffer);
@@ -792,6 +745,6 @@ void mpu_loop() {
     quat_msg.y = q.y;
     quat_msg.z = q.z;
 
-    quat_pub.publish(&quat_msg);
+    RCSOFTCHECK(rcl_publish(&quat_pub, &quat_msg, NULL));
   }
 }
