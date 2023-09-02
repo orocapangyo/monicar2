@@ -4,7 +4,7 @@
   <name>monicar2_description</name>
   <version>0.0.1</version>
   <description>
-    3D models of the OMORobot R1 Mini for simulation and visualization
+    3D models of the monicar2 for simulation and visualization
   </description>
   <license>Apache 2.0</license>
   <url type="repository">https://github.com/bishopearson/monicar2</url>

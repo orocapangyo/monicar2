@@ -3,7 +3,7 @@ from glob import glob
 from setuptools import find_packages
 from setuptools import setup
 
-package_name = 'monicar2_bringup'
+package_name = 'monicar2_imuconverter'
 
 setup(
     name=package_name,
@@ -19,10 +19,10 @@ setup(
         'setuptools',
     ],
     zip_safe=True,
-    author='ChangWhan Lee',
-    author_email='zeta0707@gmail.com',
-    maintainer='ChangWhan Lee',
-    maintainer_email='zeta0707@gmail.com',
+    author='Bishop Pearson',
+    author_email='bishopearson@gmail.com',
+    maintainer='Bishop Pearson',
+    maintainer_email='bishopearson@gmail.com',
     keywords=['ROS'],
     classifiers=[
         'Intended Audience :: Developers',
@@ -31,13 +31,13 @@ setup(
         'Topic :: Software Development',
     ],
     description=(
-        'monicar2 driver node that include iff drive controller, odometry and tf node'
+        'monicar2 IMU converter'
     ),
     license='Apache License, Version 2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'monicar2_odom = monicar2_bringup.script.monicar2_odom:main',
+            'monicar2_imuconverter = monicar2_imuconverter.script.monicar2_imuconverter:main',
         ],
     },
 )
