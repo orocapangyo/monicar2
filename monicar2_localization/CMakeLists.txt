@@ -2,7 +2,7 @@
 # Set minimum required version of cmake, project name and compile options
 ################################################################################
 cmake_minimum_required(VERSION 3.5)
-project(monicar2_imuconverter)
+project(monicar2_localization)
 
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
@@ -21,7 +21,7 @@ find_package(ament_cmake REQUIRED)
 # Install
 ################################################################################
 install(
-  DIRECTORY launch rviz script
+  DIRECTORY launch rviz
   DESTINATION share/${PROJECT_NAME}
 )
 

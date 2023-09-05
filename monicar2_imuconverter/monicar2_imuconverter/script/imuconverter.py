@@ -15,7 +15,7 @@ import math
 
 class ImuNode(Node):
     def __init__(self):
-        super().__init__('monicar2_imu_node')
+        super().__init__('imu_node')
         self.declare_parameters(
             namespace='',
             parameters=[

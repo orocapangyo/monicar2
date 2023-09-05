@@ -3,7 +3,7 @@ from glob import glob
 from setuptools import find_packages
 from setuptools import setup
 
-package_name = 'monicar2_imuconverter'
+package_name = 'monicar2_localization'
 
 setup(
     name=package_name,
@@ -31,13 +31,14 @@ setup(
         'Topic :: Software Development',
     ],
     description=(
-        'monicar2 IMU converter'
+        'monicar2 localization'
     ),
     license='Apache License, Version 2.0',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'imuconverter = monicar2_imuconverter.script.imuconverter:main',
+            'odomPublisher = monicar2_localization.script.odomPublisher:main',
+            'rviz2ClickTo2d = monicar2_localization.script.rviz2ClickTo2d:main',
         ],
     },
 )

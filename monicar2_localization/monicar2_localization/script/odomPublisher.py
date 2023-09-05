@@ -7,6 +7,9 @@
 #Refers below tutorials
 #https://docs.ros.org/en/rolling/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Py.html
 
+# euler_from_quaternion, quaternion_from_euler(
+# https://gist.github.com/salmagro/2e698ad4fbf9dae40244769c5ab74434
+
 import math
 from math import sin, cos, pi
 
