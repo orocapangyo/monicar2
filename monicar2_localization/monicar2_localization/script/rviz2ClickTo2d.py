@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Author: ChangeWhan Lee
 
-# euler_from_quaternion, quaternion_from_euler(
+# euler_from_quaternion, quaternion_from_euler
 # https://gist.github.com/salmagro/2e698ad4fbf9dae40244769c5ab74434
 
 import math

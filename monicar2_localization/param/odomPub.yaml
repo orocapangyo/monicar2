@@ -1,0 +1,3 @@
+odompub_node:
+  ros__parameters:
+    initialPose: 0

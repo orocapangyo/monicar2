@@ -5,8 +5,9 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /Status1
         - /Imu1
+        - /Imu1/Box properties1
+        - /Imu1/Axes properties1
       Splitter Ratio: 0.5
     Tree Height: 617
   - Class: rviz_common/Selection
@@ -50,15 +51,15 @@ Visualization Manager:
         Derotate acceleration: true
         Enable acceleration: false
       Axes properties:
-        Axes scale: 1
+        Axes scale: 1.2999999523162842
         Enable axes: true
       Box properties:
-        Box alpha: 1
-        Box color: 255; 0; 0
-        Enable box: false
+        Box alpha: 0.699999988079071
+        Box color: 255; 255; 255
+        Enable box: true
         x_scale: 1
-        y_scale: 1
-        z_scale: 1
+        y_scale: 2
+        z_scale: 0.20000000298023224
       Class: rviz_imu_plugin/Imu
       Enabled: true
       Name: Imu
@@ -147,5 +148,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 199
-  Y: 96
+  X: 1027
+  Y: 254

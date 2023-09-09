@@ -4,10 +4,10 @@
 #Port below ROS1 to ROS2
 #https://answers.ros.org/question/326434/how-to-compute-odometry-from-encoder-ticks/
 
-#Refers below tutorials
+#Refer below tutorials
 #https://docs.ros.org/en/rolling/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Py.html
 
-# euler_from_quaternion, quaternion_from_euler(
+# euler_from_quaternion, quaternion_from_euler
 # https://gist.github.com/salmagro/2e698ad4fbf9dae40244769c5ab74434
 
 import math
@@ -26,7 +26,7 @@ from rclpy.qos import QoSProfile
 from tf2_ros import TransformBroadcaster
 
 #Parameters
-wheeltrack = 0.165
+wheeltrack = 0.160
 wheelradius = 0.033
 TPR = 1860.0
 
@@ -95,11 +95,11 @@ class ODOMNode(Node):
         self.current_time = self.last_time
         print('Init done')
 
-    def leftTicksCallback(msg):
+    def leftTicksCallback(self, msg):
         self.left_ticks = msg.data
         #print('leftTicks: %d' %(self.left_ticks) )
 
-    def rightTicksCallback(msg):
+    def rightTicksCallback(self, msg):
         self.right_ticks = msg.data
         #print('rightTicks: %d' %(self.right_ticks) )
 
@@ -124,11 +124,11 @@ class ODOMNode(Node):
         else:
             radius=dc/dth
 
-            iccX=x-radius*sin(self.th)
-            iccY=y+radius*cos(self.th)
+            iccX=self.x-radius*sin(self.th)
+            iccY=self.y+radius*cos(self.th)
 
-            dx = cos(dth) * (x-iccX) - sin(dth) * (y-iccY) + iccX - x
-            dy = sin(dth) * (x-iccX) + cos(dt) * (y-iccY) + iccY - y
+            dx = cos(dth) * (self.x-iccX) - sin(dth) * (self.y-iccY) + iccX - self.x
+            dy = sin(dth) * (self.x-iccX) + cos(dt) * (self.y-iccY) + iccY - self.y
 
         self.x += dx  
         self.y += dy 

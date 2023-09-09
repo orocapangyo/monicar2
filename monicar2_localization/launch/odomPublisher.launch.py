@@ -14,8 +14,8 @@ def generate_launch_description():
   odom_parameter = LaunchConfiguration(
     'odom_parameter',
     default=os.path.join(
-      get_package_share_directory('monicar2_bringup'),
-      'param/monicar2_odom.yaml'
+      get_package_share_directory('monicar2_localization'),
+      'param/odomPub.yaml'
     )
   )
 
@@ -24,7 +24,7 @@ def generate_launch_description():
     ),
 
     Node(
-        package='monicar2_bringup', executable='monicar2_odom', name='odom_node',
+        package='monicar2_localization', executable='odomPublisher', name='odompub_node',
         output='screen',
         parameters=[odom_parameter],
     ),
