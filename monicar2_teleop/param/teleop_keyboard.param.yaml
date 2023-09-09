@@ -1,0 +1,7 @@
+teleop_keyboard_node:
+  ros__parameters:
+    #don't use
+    MONICAR2_MAX_LIN_VEL : 1.00
+    MONICAR2_MAX_ANG_VEL : 1.00
+    LIN_VEL_STEP_SIZE : 0.1
+    ANG_VEL_STEP_SIZE : 0.1

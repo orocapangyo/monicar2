@@ -7,7 +7,7 @@ package_name = 'monicar2_teleop'
 
 setup(
     name=package_name,
-    version='2.1.2',
+    version='0.0.1',
     packages=find_packages(exclude=[]),
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
@@ -31,7 +31,7 @@ setup(
         'Topic :: Software Development',
     ],
     description=(
-        'Teleoperation node using keyboard or joystick for the OMORobot R1 Mini'
+        'Teleoperation node using keyboard or joystick for Monicar2'
     ),
     license='Apache License, Version 2.0',
     tests_require=['pytest'],
