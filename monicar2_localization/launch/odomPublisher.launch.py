@@ -15,7 +15,7 @@ def generate_launch_description():
     'odom_parameter',
     default=os.path.join(
       get_package_share_directory('monicar2_localization'),
-      'param/odomPub.yaml'
+      'param/initPose1.yaml'
     )
   )
 
@@ -27,6 +27,11 @@ def generate_launch_description():
         package='monicar2_localization', executable='odomPublisher', name='odompub_node',
         output='screen',
         parameters=[odom_parameter],
+    ),
+
+    Node(
+        package='monicar2_localization', executable='rviz2ClickTo2d', name='rviz2_click_node',
+        output='screen',
     ),
 
   ])

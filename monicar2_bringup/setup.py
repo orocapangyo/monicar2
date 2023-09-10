@@ -14,6 +14,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'param'), glob('param/*.yaml')),
+        (os.path.join('share', package_name, 'rviz'), glob('rviz/*.rviz')),
     ],
     install_requires=[
         'setuptools',
@@ -37,7 +38,6 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'monicar2_odom = monicar2_bringup.script.monicar2_odom:main',
         ],
     },
 )

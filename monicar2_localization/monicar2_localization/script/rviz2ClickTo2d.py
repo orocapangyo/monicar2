@@ -3,8 +3,6 @@
 
 # euler_from_quaternion, quaternion_from_euler
 # https://gist.github.com/salmagro/2e698ad4fbf9dae40244769c5ab74434
-
-import math
 from math import sin, cos, pi
 import numpy as np
 
@@ -53,10 +51,6 @@ class Rviz2Click2To2d(Node):
 
         print('rvRviz2Click2To2d created')
 
-        # Get parameter values
-        #self.initialPose = self.get_parameter_or('initialPose', Parameter('initialPose', Parameter.Type.INTEGER, 1)).get_parameter_value().integer_value
-        #print('initialPose: %d' %(self.initialPose) )
-
         self.goalPub = self.create_publisher(PoseStamped, 'goal_2d', 10)
         self.initPub = self.create_publisher(PoseStamped, 'initial_2d', 10)
 
@@ -68,7 +62,7 @@ class Rviz2Click2To2d(Node):
         # Mark current time
         self.last_time = self.get_clock().now()
         self.current_time = self.last_time
-        print('Init done')
+        print('rvRviz2Click2To2d done')
 
     def handle_goal(self, msg):
         print('goal clicked')

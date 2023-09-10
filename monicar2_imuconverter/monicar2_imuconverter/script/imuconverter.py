@@ -104,9 +104,10 @@ class ImuNode(Node):
         t.header.frame_id = "base_link"
         t.child_frame_id = "imu_link"
 
-        t.transform.translation.x = 0.0
+        #relative position base_link -> imu_link
+        t.transform.translation.x = 0.065
         t.transform.translation.y = 0.0
-        t.transform.translation.z = 0.0
+        t.transform.translation.z = 0.06
 
         t.transform.rotation =  self.imu_msg.orientation 
         self.br.sendTransform(t)

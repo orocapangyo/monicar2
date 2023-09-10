@@ -3,7 +3,7 @@ rplidar_ros2_driver_node:
     channel_type: serial
     serial_port: /dev/rplidar
     serial_baudrate: 115200
-    frame_id: laser
+    frame_id: laser_link
     inverted: false
     angle_compensate: true
     scan_mode: Sensitivity

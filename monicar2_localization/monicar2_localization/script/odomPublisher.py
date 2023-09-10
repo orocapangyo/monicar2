@@ -20,9 +20,8 @@ from rclpy.logging import get_logger
 
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Int32
-from geometry_msgs.msg import TransformStamped, Point, Pose, Quaternion, Twist, Vector3
+from geometry_msgs.msg import TransformStamped, Point, Pose, Quaternion, Twist, PoseStamped
 
-from rclpy.qos import QoSProfile
 from tf2_ros import TransformBroadcaster
 
 #Parameters
@@ -80,10 +79,10 @@ class ODOMNode(Node):
         self.vy =  0.0
         self.vth =  0.0
 
-        self.qos = QoSProfile(depth=10)
-        self.odom_pub = self.create_publisher(Odometry, 'odom', self.qos)
+        self.odom_pub = self.create_publisher(Odometry, 'odom', 10)
         self.left_ticks_sub = self.create_subscription(Int32, 'left_ticks', self.leftTicksCallback, 10)
         self.right_ticks_sub = self.create_subscription(Int32, 'right_ticks', self.rightTicksCallback, 10)
+        self.init_sub = self.create_subscription(PoseStamped, 'initial_2d', self.init2dCallback, 10)
         
         self.timer_tick = 0.05
         self.timer = self.create_timer(self.timer_tick, self.cb_timer)
@@ -93,7 +92,7 @@ class ODOMNode(Node):
         # Mark current time
         self.last_time = self.get_clock().now()
         self.current_time = self.last_time
-        print('Init done')
+        print('odompub_node done')
 
     def leftTicksCallback(self, msg):
         self.left_ticks = msg.data
@@ -103,7 +102,17 @@ class ODOMNode(Node):
         self.right_ticks = msg.data
         #print('rightTicks: %d' %(self.right_ticks) )
 
+    def init2dCallback(self, msg):
+        self.x = msg.pose.position.x
+        self.y = msg.pose.position.y
+        self.z = msg.pose.orientation.z
+        self.initialPose = 1
+        print("initial_2d done")
+
     def cb_timer(self):
+
+        if self.initialPose == 0:
+                return 1
 
         self.current_time = self.get_clock().now()
 
@@ -139,8 +148,8 @@ class ODOMNode(Node):
         # Read message content and assign it to
         # corresponding tf variables
         t.header.stamp = self.get_clock().now().to_msg()
-        t.header.frame_id = 'base_link'
-        t.child_frame_id = 'odom'
+        t.header.frame_id = 'odom'
+        t.child_frame_id = 'base_footprint'
 
         # Turtle only exists in 2D, thus we get x and y translation
         # coordinates from the message and set the z coordinate to 0
@@ -180,7 +189,7 @@ class ODOMNode(Node):
         odom.pose.pose.orientation.w = odom_quat[3]
 
         # set the velocity
-        odom.child_frame_id = "base_link"
+        odom.child_frame_id = "base_footprint"
         odom.twist.twist.linear.x = vx
         odom.twist.twist.linear.y = vy
         odom.twist.twist.angular.z = vth

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# Author: Bishop Pearson
 import os
 
 from ament_index_python.packages import get_package_share_directory
@@ -10,13 +9,28 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import TextSubstitution
 from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
+  odom_parameter = LaunchConfiguration(
+    'odom_parameter',
+    default=os.path.join(
+      get_package_share_directory('monicar2_localization'),
+      'param/initPose1.yaml'
+    )
+  )
+  
   return LaunchDescription([
 
+    IncludeLaunchDescription(
+      PythonLaunchDescriptionSource([
+        FindPackageShare("monicar2_bringup"), '/launch', '/bringup.launch.py'])
+    ),
+
     Node(
-        package='monicar2_localization', executable='rviz2ClickTo2d', name='rviz2_click_node',
+        package='monicar2_localization', executable='odomPublisher', name='odompub_node',
         output='screen',
+        parameters=[odom_parameter],
     ),
 
   ])
