@@ -40,6 +40,8 @@ setup(
         'console_scripts': [
             'odomPublisher = monicar2_localization.script.odomPublisher:main',
             'rviz2ClickTo2d = monicar2_localization.script.rviz2ClickTo2d:main',
+            'move = monicar2_localization.script.move:main',
+            'rotate = monicar2_localization.script.rotate:main',
         ],
     },
 )

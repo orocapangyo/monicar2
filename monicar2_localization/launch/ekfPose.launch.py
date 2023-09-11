@@ -12,16 +12,25 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
-
+  odom_parameter = LaunchConfiguration(
+    'odom_parameter',
+    default=os.path.join(
+      get_package_share_directory('monicar2_localization'),
+      'param/initPose0.yaml'
+    )
+  )
+  
   return LaunchDescription([
+
     IncludeLaunchDescription(
       PythonLaunchDescriptionSource([
         FindPackageShare("monicar2_bringup"), '/launch', '/bringup.launch.py'])
     ),
 
-    IncludeLaunchDescription(
-      PythonLaunchDescriptionSource([
-        FindPackageShare("monicar2_localization"), '/launch', '/odomPublisher.launch.py'])
-    ), 
+    Node(
+        package='monicar2_localization', executable='odomPublisher', name='odompub_node',
+        output='screen',
+        parameters=[odom_parameter],
+    ),
 
   ])

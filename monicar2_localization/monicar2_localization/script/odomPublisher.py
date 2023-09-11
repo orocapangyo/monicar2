@@ -3,6 +3,7 @@
 
 #Port below ROS1 to ROS2
 #https://answers.ros.org/question/326434/how-to-compute-odometry-from-encoder-ticks/
+#https://answers.ros.org/question/383841/ros2-python-odometry/
 
 #Refer below tutorials
 #https://docs.ros.org/en/rolling/Tutorials/Intermediate/Tf2/Writing-A-Tf2-Broadcaster-Py.html
@@ -90,7 +91,7 @@ class ODOMNode(Node):
          # Initialize the transform broadcaster
         self.odom_broadcaster = TransformBroadcaster(self)
         # Mark current time
-        self.last_time = self.get_clock().now()
+        self.last_time = self.get_clock().now().to_msg()
         self.current_time = self.last_time
         print('odompub_node done')
 
@@ -114,7 +115,7 @@ class ODOMNode(Node):
         if self.initialPose == 0:
                 return 1
 
-        self.current_time = self.get_clock().now()
+        self.current_time = self.get_clock().now().to_msg()
 
         delta_L = self.left_ticks - self.last_left_ticks
         delta_R = self.right_ticks - self.last_right_ticks
@@ -122,8 +123,9 @@ class ODOMNode(Node):
         dl = 2 * pi * wheelradius * delta_L / TPR
         dr = 2 * pi * wheelradius * delta_R / TPR
         dc = (dl + dr) / 2
-        #dt = (self.current_time - self.last_time)
-        dt = self.timer_tick
+        ct = self.current_time.sec + (self.current_time.nanosec/1e+9)
+        lt = self.last_time.sec + (self.last_time.nanosec/1e+9)
+        dt = (ct - lt)
         dth = (dr-dl)/wheeltrack
 
         if dr==dl:
