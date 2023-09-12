@@ -9,6 +9,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import TextSubstitution
 from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
   odom_parameter = LaunchConfiguration(
@@ -21,6 +22,11 @@ def generate_launch_description():
 
   return LaunchDescription([
     DeclareLaunchArgument('odomparameter', default_value=odom_parameter
+    ),
+
+    IncludeLaunchDescription(
+      PythonLaunchDescriptionSource([
+        FindPackageShare("monicar2_bringup"), '/launch', '/mcu.launch.py'])
     ),
 
     Node(
