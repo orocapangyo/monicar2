@@ -14,10 +14,6 @@
 #include <geometry_msgs/Twist.h>
 #include <PID_v1.h>
 
-#define VleftVRight 1
-
-#define USE_PID 1
-#if USE_PID == 1
 double trackAdjustValueL = 0.0;
 double trackSetpointL = 0.0;
 double trackErrorL = 0.0;
@@ -31,7 +27,6 @@ double Kd = 1.0;   //Determines how aggressively the PID reacts to the change in
 
 PID trackPIDLeft(&trackErrorL, &trackAdjustValueL, &trackSetpointL, Kp, Ki, Kd, DIRECT);
 PID trackPIDRight(&trackErrorR, &trackAdjustValueR, &trackSetpointR, Kp, Ki, Kd, DIRECT);
-#endif
 
 // Encoder output to Arduino Interrupt pin. Tracks the tick count.
 #define ENC_IN_LEFT_A 36
@@ -42,17 +37,17 @@ PID trackPIDRight(&trackErrorR, &trackAdjustValueR, &trackSetpointR, Kp, Ki, Kd,
 #define ENC_IN_RIGHT_B 35
 
 // Motor A connections, Left
-#define enA 32
+#define ENA 32
 // Motor B connections, Right
-#define enB 33
+#define ENB 33
 
 #define ENA_CH 0
 #define ENB_CH 1
 
-#define ain1 26
-#define ain2 25
-#define bin1 27
-#define bin2 14
+#define AIN1 26
+#define AIN2 25
+#define BIN1 27
+#define BIN2 14
 #define STBY 4
 
 // True = Forward; False = Reverse
@@ -84,16 +79,13 @@ long currentMillis = 0;
 #define WHEEL_BASE (0.160)
 
 #define K_P 1125.0
-#define K_b 3.5
-#define PWM_MIN 40.0   // about 0.05 m/s
-#define PWM_MAX 240.0  // about 0.2 m/s
-#define K_bias 5.0     // left is slow, then add this bias
+#define K_b 10
+#define PWM_MIN 43.0   // about 0.03 m/s
+#define PWM_MAX 235.0  // about 0.2 m/s
 
 #define PWM_TURN (PWM_MIN)
 // How much the PWM value can change each cycle
-#define PWM_INCREMENT 1
-// Correction multiplier for drift. Chosen through experimentation.
-#define DRIFT_MULTIPLIER 80.0
+#define PWM_INCREMENT 8
 
 // Set linear velocity and PWM variable values for each wheel
 float velLeftWheel = 0.0;
@@ -108,6 +100,13 @@ int pwmRightReq = 0;
 float lastCmdVelReceived = 0.0;
 bool blinkState = false;
 
+#define NUM_READ 10
+float linearx = 0.0, angularz = 0.0;
+// if Vright readch input speed, then average pwmOut
+int doAvg = 0;
+int avgPWML[NUM_READ], avgPWMR[NUM_READ];
+int readIndex = 0;
+int total = 0;
 /////////////////////// Tick Data Publishing Functions ////////////////////////
 // Increment the number of ticks
 void IRAM_ATTR left_wheel_tick() {
@@ -192,6 +191,10 @@ void calc_vel_left_wheel() {
   Serial.print(velLeftWheel, 3);
   Serial.print(", ");
   Serial.println(numOfTicks);
+
+  //if speed reach to 98~102% of target, then start to measure average
+  if ((velLeftWheel > linearx * 0.98) && (velLeftWheel < linearx * 1.02))
+    doAvg = 1;
 }
 
 // Calculate the right wheel linear velocity in m/s every time a
@@ -222,6 +225,10 @@ void calc_vel_right_wheel() {
   Serial.print(velRightWheel, 3);
   Serial.print(", ");
   Serial.println(numOfTicks);
+
+  //if speed reach to 98~102% of target, then start to measure average
+  if ((velRightWheel > linearx * 0.98) && (velRightWheel < linearx * 1.02))
+    doAvg = 1;
 }
 
 // Take the velocity command as input and calculate the PWM values.
@@ -232,9 +239,9 @@ void calc_pwm_values(float linearx, float angularz) {
 
   if (vLeft >= 0.0) {
     // Calculate the PWM value given the desired velocity
-    pwmLeftReq = int(K_P * vLeft + K_b + K_bias);
+    pwmLeftReq = int(K_P * vLeft + K_b);
   } else {
-    pwmLeftReq = int(K_P * vLeft - K_b - K_bias);
+    pwmLeftReq = int(K_P * vLeft - K_b);
   }
   if (vRight >= 0.0) {
     // Calculate the PWM value given the desired velocity
@@ -251,7 +258,6 @@ void calc_pwm_values(float linearx, float angularz) {
     pwmRightReq = 0;
   }
 
-#if USE_PID == 1
   //reset and start again PID controller
   trackPIDLeft.SetMode(MANUAL);
   trackAdjustValueL = 0.0;
@@ -262,7 +268,6 @@ void calc_pwm_values(float linearx, float angularz) {
   trackAdjustValueR = 0.0;
   trackErrorR = 0.0;
   trackPIDRight.SetMode(AUTOMATIC);
-#endif
 
   Serial.print("cPWM:");
   Serial.print(pwmLeftReq);
@@ -282,31 +287,31 @@ void set_pwm_values() {
 
   // Set the direction of the motors
   if (pwmLeftReq > 0) {  // Left wheel forward
-    digitalWrite(ain1, HIGH);
-    digitalWrite(ain2, LOW);
+    digitalWrite(AIN1, HIGH);
+    digitalWrite(AIN2, LOW);
   } else if (pwmLeftReq < 0) {  // Left wheel reverse
-    digitalWrite(ain1, LOW);
-    digitalWrite(ain2, HIGH);
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, HIGH);
   } else if (pwmLeftReq == 0 && pwmLeftOut == 0) {  // Left wheel stop
-    digitalWrite(ain1, LOW);
-    digitalWrite(ain2, LOW);
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, LOW);
   } else {  // Left wheel stop
-    digitalWrite(ain1, LOW);
-    digitalWrite(ain2, LOW);
+    digitalWrite(AIN1, LOW);
+    digitalWrite(AIN2, LOW);
   }
 
   if (pwmRightReq > 0) {  // Right wheel forward
-    digitalWrite(bin1, HIGH);
-    digitalWrite(bin2, LOW);
+    digitalWrite(BIN1, HIGH);
+    digitalWrite(BIN2, LOW);
   } else if (pwmRightReq < 0) {  // Right wheel reverse
-    digitalWrite(bin1, LOW);
-    digitalWrite(bin2, HIGH);
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, HIGH);
   } else if (pwmRightReq == 0 && pwmRightOut == 0) {  // Right wheel stop
-    digitalWrite(bin1, LOW);
-    digitalWrite(bin2, LOW);
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, LOW);
   } else {  // Right wheel stop
-    digitalWrite(bin1, LOW);
-    digitalWrite(bin2, LOW);
+    digitalWrite(BIN1, LOW);
+    digitalWrite(BIN2, LOW);
   }
 
   Serial.print("sReq:");
@@ -322,14 +327,12 @@ void set_pwm_values() {
 
   } else {
     // reached calculated PWM, then start PID
-#if USE_PID == 1
     // not stop case, run PID
     if (pwmLeftReq != 0) {
       trackErrorL = (velLeftWheel - vLeft) * 100.0;
       if (trackPIDLeft.Compute())  //true if PID has triggered
         pwmLeftOut += trackAdjustValueL;
     }
-#endif
   }
 
   if (abs(pwmRightReq) > pwmRightOut) {
@@ -338,13 +341,12 @@ void set_pwm_values() {
     pwmRightOut -= PWM_INCREMENT;
   } else {
     // reached calculated PWM, then start PID
-#if USE_PID == 1
+
     if (pwmRightReq != 0) {
       trackErrorR = (velRightWheel - vRight) * 100.0;
       if (trackPIDRight.Compute())  //true if PID has triggered
         pwmRightOut += trackAdjustValueR;
     }
-#endif
   }
 
   // Conditional operator to limit PWM output at the maximum
@@ -356,12 +358,52 @@ void set_pwm_values() {
   Serial.print(":");
   Serial.println(pwmRightOut);
 
-#if USE_PID == 1
-  Serial.print("sErr:");
-  Serial.print(trackErrorL, 3);
-  Serial.print(":");
-  Serial.println(trackErrorR, 3);
-#endif
+  if (doAvg == 1) {
+    int average;
+
+    // subtract the last reading:
+    total = total - avgPWML[readIndex];
+    // read from the sensor:
+    avgPWML[readIndex] = pwmLeftOut;
+    // add the reading to the total:
+    total = total + avgPWML[readIndex];
+    // advance to the next position in the array:
+    readIndex = readIndex + 1;
+    // if we're at the end of the array...
+    if (readIndex >= NUM_READ) {
+      // ...wrap around to the beginning:
+      readIndex = 0;
+    }
+    // calculate the average:
+    average = total / NUM_READ;
+    Serial.print("avgPWM:");
+    Serial.print(average);
+
+    // subtract the last reading:
+    total = total - avgPWMR[readIndex];
+    // read from the sensor:
+    avgPWMR[readIndex] = pwmLeftOut;
+    // add the reading to the total:
+    total = total + avgPWMR[readIndex];
+    // advance to the next position in the array:
+    readIndex = readIndex + 1;
+
+    // if we're at the end of the array...
+    if (readIndex >= NUM_READ) {
+      // ...wrap around to the beginning:
+      readIndex = 0;
+    }
+    // calculate the average:
+    average = total / NUM_READ;
+
+    Serial.print(":");
+    Serial.println(average);
+  }
+
+  //Serial.print("sErr:");
+  //Serial.print(trackErrorL, 3);
+  //Serial.print(":");
+  //Serial.println(trackErrorR, 3);
 
   // PWM output cannot be less than 0
   pwmLeftOut = (pwmLeftOut < 0) ? 0 : pwmLeftOut;
@@ -399,41 +441,38 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(ENC_IN_LEFT_A), left_wheel_tick, RISING);
   attachInterrupt(digitalPinToInterrupt(ENC_IN_RIGHT_A), right_wheel_tick, RISING);
 
-  pinMode(ain1, OUTPUT);
-  pinMode(ain2, OUTPUT);
-  pinMode(bin1, OUTPUT);
-  pinMode(bin2, OUTPUT);
+  pinMode(AIN1, OUTPUT);
+  pinMode(AIN2, OUTPUT);
+  pinMode(BIN1, OUTPUT);
+  pinMode(BIN2, OUTPUT);
   pinMode(STBY, OUTPUT);
 
   // Turn off motors - Initial state
-  digitalWrite(ain1, LOW);
-  digitalWrite(ain2, LOW);
-  digitalWrite(bin1, LOW);
-  digitalWrite(bin2, LOW);
+  digitalWrite(AIN1, LOW);
+  digitalWrite(AIN2, LOW);
+  digitalWrite(BIN1, LOW);
+  digitalWrite(BIN2, LOW);
   digitalWrite(STBY, HIGH);
 
-  ledcSetup(ENA_CH, 5000, 8);  //enA, channel: 0, 5000Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENA_CH, 5000, 8);  //ENA, channel: 0, 5000Hz, 8bits = 256(0 ~ 255)
   ledcSetup(ENB_CH, 5000, 8);  //enB, channel: 1, 5000Hz, 8bits = 256(0 ~ 255)
 
-  ledcAttachPin(enA, ENA_CH);
-  ledcAttachPin(enB, ENB_CH);
+  ledcAttachPin(ENA, ENA_CH);
+  ledcAttachPin(ENB, ENB_CH);
 
   // Set the motor speed
   ledcWrite(ENA_CH, 0);
   ledcWrite(ENB_CH, 0);
 
-#if USE_PID == 1
   trackPIDLeft.SetMode(AUTOMATIC);
   trackPIDLeft.SetSampleTime(200);
   trackPIDLeft.SetOutputLimits(-20, 20);
   trackPIDRight.SetMode(AUTOMATIC);
   trackPIDRight.SetSampleTime(200);
   trackPIDRight.SetOutputLimits(-20, 20);
-#endif
 }
 
 void loop() {
-  float linearx, angularz;
 
   // Record the time
   currentMillis = millis();
@@ -442,7 +481,13 @@ void loop() {
   if (Serial.available() > 0) {
     linearx = Serial.parseFloat();
     angularz = Serial.parseFloat();
-
+    doAvg = 0;
+    readIndex = 0;
+    total = 0;
+    for (int i = 0; i < NUM_READ; i++) {
+      avgPWML[i] = 0;
+      avgPWMR[i] = 0;
+    }
     //prints the received float number
     Serial.println(linearx);
     Serial.println(angularz);

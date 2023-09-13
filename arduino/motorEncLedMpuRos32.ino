@@ -141,14 +141,13 @@ long currentMillis = 0;
 #define WHEEL_BASE (0.160)
 
 #define K_P 1125.0
-#define K_b 3.5
-#define PWM_MIN 40.0   // about 0.05 m/s
-#define PWM_MAX 240.0  // about 0.2 m/s
-#define K_bias 5.0     // left is slow, then add this bias
+#define K_b 10
+#define PWM_MIN 43.0   // about 0.03 m/s
+#define PWM_MAX 235.0  // about 0.2 m/s
 
 #define PWM_TURN (PWM_MIN)
 // How much the PWM value can change each cycle
-#define PWM_INCREMENT 1
+#define PWM_INCREMENT 8
 
 // Set linear velocity and PWM variable values for each wheel
 float velLeftWheel = 0.0;
@@ -327,9 +326,9 @@ void cmd_vel_callback(const void *msgin) {
 
   if (vLeft >= 0.0) {
     // Calculate the PWM value given the desired velocity
-    pwmLeftReq = int(K_P * vLeft + K_b + K_bias);
+    pwmLeftReq = int(K_P * vLeft + K_b);
   } else {
-    pwmLeftReq = int(K_P * vLeft - K_b - K_bias);
+    pwmLeftReq = int(K_P * vLeft - K_b);
   }
   if (vRight >= 0.0) {
     // Calculate the PWM value given the desired velocity
