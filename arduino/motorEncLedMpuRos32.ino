@@ -25,6 +25,13 @@
 #include <PID_v1.h>
 #include <geometry_msgs/msg/quaternion.h>
 
+#define MOTOR_1860 1
+#define MOTOR_620 2
+#define MOTOR_TYPE MOTOR_1860
+
+#define PRINT_VEL 0
+#define PRINT_PIDERR 0
+
 #define USE_IMU 1
 #if USE_IMU == 1
 #include "I2Cdev.h"
@@ -56,6 +63,7 @@ rcl_node_t node;
 #define DEBUG 1
 #if (DEBUG == 1)
 #define DEBUG_PRINT(x) Serial2.print(x)
+#define DEBUG_PRINTY(x, y) Serial2.print(x, y)
 #define DEBUG_PRINTLN(x) Serial2.println(x)
 #else
 #define DEBUG_PRINT(x)
@@ -69,14 +77,13 @@ double trackAdjustValueR = 0.0;
 double trackSetpointR = 0.0;
 double trackErrorR = 0.0;
 
-double Kp = 5.0;   //Determines how aggressively the PID reacts to the current amount of error (Proportional)
-double Ki = 10.0;  //Determines how aggressively the PID reacts to error over time (Integral)
-double Kd = 1.0;   //Determines how aggressively the PID reacts to the change in error (Derivative)
+double Kp = 2.0;   //Determines how aggressively the PID reacts to the current amount of error (Proportional)
+double Ki = 20.0;  //Determines how aggressively the PID reacts to error over time (Integral)
+double Kd = 0.0;   //Determines how aggressively the PID reacts to the change in error (Derivative)
 
 PID trackPIDLeft(&trackErrorL, &trackAdjustValueL, &trackSetpointL, Kp, Ki, Kd, DIRECT);
 PID trackPIDRight(&trackErrorR, &trackAdjustValueR, &trackSetpointR, Kp, Ki, Kd, DIRECT);
 
-////////////////// Motor Controller Variables and Constants ///////////////////
 // Encoder output to Arduino Interrupt pin. Tracks the tick count.
 #define ENC_IN_LEFT_A 36
 #define ENC_IN_RIGHT_A 34
@@ -124,8 +131,6 @@ enum LEDBEHAV {
   ALL_ON        //all on
 };
 
-// Time interval for measurements in milliseconds
-const int INTERVAL = 30;
 long previousMillis = 0;
 long currentMillis = 0;
 
@@ -136,18 +141,28 @@ long currentMillis = 0;
 // Distance from center of the left tire to the center of the right tire in m. We won't use this in this code.
 // Number of ticks a wheel makes moving a linear distance of 1 meter
 // This value was measured manually.
-#define TICKS_PER_REVOLUTION (1860.0)
 #define TICKS_PER_METER (TICKS_PER_REVOLUTION / (2.0 * 3.141592 * WHEEL_RADIUS))
 #define WHEEL_BASE (0.160)
 
+#if MOTOR_TYPE == MOTOR_1860
 #define K_P 1125.0
-#define K_b 10
+#define K_b 30
 #define PWM_MIN 43.0   // about 0.03 m/s
-#define PWM_MAX 235.0  // about 0.2 m/s
+#define PWM_MAX 245.0  // about 0.2 m/s
+#define TICKS_PER_REVOLUTION (1860.0)
+#define K_bias 0.0
+#define INTERVAL 30
+#else
+#define K_P 1227.0
+#define K_b 14
+#define PWM_MIN 63.0   // about 0.04 m/s
+#define PWM_MAX 250.0  // about 0.2 m/s
+#define TICKS_PER_REVOLUTION (620.0)
+#define K_bias (-10.0)
+#define INTERVAL 90
+#endif
 
 #define PWM_TURN (PWM_MIN)
-// How much the PWM value can change each cycle
-#define PWM_INCREMENT 8
 
 // Set linear velocity and PWM variable values for each wheel
 float velLeftWheel = 0.0;
@@ -286,6 +301,12 @@ void calc_vel_left_wheel() {
 
   // Update the timestamp
   prevTime = (millis() / 1000.0);
+#if PRINT_VEL == 1
+  DEBUG_PRINT("L:");
+  DEBUG_PRINTY(velLeftWheel, 3);
+  DEBUG_PRINT(", ");
+  DEBUG_PRINTLN(numOfTicks);
+#endif
 }
 
 // Calculate the right wheel linear velocity in m/s every time a
@@ -311,6 +332,13 @@ void calc_vel_right_wheel() {
 
   // Update the timestamp
   prevTime = (millis() / 1000.0);
+
+#if PRINT_VEL == 1
+  DEBUG_PRINT("L:");
+  DEBUG_PRINTY(veRightWheel, 3);
+  DEBUG_PRINT(", ");
+  DEBUG_PRINTLN(numOfTicks);
+#endif
 }
 
 // Take the velocity command as input and calculate the PWM values.
@@ -326,9 +354,9 @@ void cmd_vel_callback(const void *msgin) {
 
   if (vLeft >= 0.0) {
     // Calculate the PWM value given the desired velocity
-    pwmLeftReq = int(K_P * vLeft + K_b);
+    pwmLeftReq = int(K_P * vLeft + K_b + K_bias);
   } else {
-    pwmLeftReq = int(K_P * vLeft - K_b);
+    pwmLeftReq = int(K_P * vLeft - K_b - K_bias);
   }
   if (vRight >= 0.0) {
     // Calculate the PWM value given the desired velocity
@@ -358,17 +386,10 @@ void cmd_vel_callback(const void *msgin) {
 }
 
 void set_pwm_values() {
+  int average, pwm_inc;
   // These variables will hold our desired PWM values
   static int pwmLeftOut = 0;
   static int pwmRightOut = 0;
-
-  // If the required PWM is of opposite sign as the output PWM, we want to
-  // stop the car before switching direction
-  static bool stopped = false;
-  if (((pwmLeftReq * velLeftWheel < 0) && (pwmLeftOut != 0)) || ((pwmRightReq * velRightWheel < 0) && (pwmRightOut != 0))) {
-    pwmLeftReq = 0;
-    pwmRightReq = 0;
-  }
 
   // Set the direction of the motors
   if (pwmLeftReq > 0) {  // Left wheel forward
@@ -399,12 +420,23 @@ void set_pwm_values() {
     digitalWrite(BIN2, LOW);
   }
 
+  DEBUG_PRINT("sReq:");
+  DEBUG_PRINT(pwmLeftReq);
+  DEBUG_PRINT(":");
+  DEBUG_PRINTLN(pwmRightReq);
+
+  if ((abs(pwmLeftReq) - pwmLeftOut) > 16)
+    pwm_inc = 8;
+  else if ((pwmLeftOut - abs(pwmLeftReq)) > 16)
+    pwm_inc = 8;
+  else
+    pwm_inc = 1;
+
   // Calculate the output PWM value by making slow changes to the current value
   if (abs(pwmLeftReq) > pwmLeftOut) {
-    pwmLeftOut += PWM_INCREMENT;
+    pwmLeftOut += pwm_inc;
   } else if (abs(pwmLeftReq) < pwmLeftOut) {
-    pwmLeftOut -= PWM_INCREMENT;
-
+    pwmLeftOut -= pwm_inc;
   } else {
     // reached calculated PWM, then start PID
     // not stop case, run PID
@@ -416,9 +448,9 @@ void set_pwm_values() {
   }
 
   if (abs(pwmRightReq) > pwmRightOut) {
-    pwmRightOut += PWM_INCREMENT;
+    pwmRightOut += pwm_inc;
   } else if (abs(pwmRightReq) < pwmRightOut) {
-    pwmRightOut -= PWM_INCREMENT;
+    pwmRightOut -= pwm_inc;
   } else {
     // reached calculated PWM, then start PID
 
@@ -433,9 +465,21 @@ void set_pwm_values() {
   pwmLeftOut = (pwmLeftOut > PWM_MAX) ? PWM_MAX : pwmLeftOut;
   pwmRightOut = (pwmRightOut > PWM_MAX) ? PWM_MAX : pwmRightOut;
 
+  DEBUG_PRINT("sOut:");
+  DEBUG_PRINT(pwmLeftOut);
+  DEBUG_PRINT(":");
+  DEBUG_PRINTLN(pwmRightOut);
+
   // PWM output cannot be less than 0
   pwmLeftOut = (pwmLeftOut < 0) ? 0 : pwmLeftOut;
   pwmRightOut = (pwmRightOut < 0) ? 0 : pwmRightOut;
+
+#if PRINT_PIDERR == 1
+  DEBUG_PRINT("sErr:");
+  DEBUG_PRINTY(trackErrorL, 3);
+  DEBUG_PRINT(":");
+  DEBUG_PRINTLN(trackErrorR, 3);
+#endif
 
   if (pwmLeftOut > 0) {
     // Set the PWM value on the pins
@@ -631,14 +675,9 @@ void loop() {
   if (currentMillis - previousMillis > INTERVAL) {
     previousMillis = currentMillis;
 
-    DEBUG_PRINT("LT:");
-    DEBUG_PRINT(int(left_wheel_tick_count.data));
-    DEBUG_PRINT(",RT:");
-    DEBUG_PRINTLN(int(right_wheel_tick_count.data));
-
     // Calculate the velocity of the right and left wheels
-    calc_vel_right_wheel();
     calc_vel_left_wheel();
+    calc_vel_right_wheel();
 
     RCSOFTCHECK(rcl_publish(&left_pub, &left_wheel_tick_count, NULL));
     RCSOFTCHECK(rcl_publish(&right_pub, &right_wheel_tick_count, NULL));
@@ -647,7 +686,7 @@ void loop() {
 
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     //buzzer beep if robot move reverse
-    if ((velLeftWheel < 0.0) || (velRightWheel < 0.0))
+    if ((velLeftWheel < 0.0) && (velRightWheel < 0.0))
       digitalWrite(BUZZER, HIGH);
     else
       digitalWrite(BUZZER, LOW);

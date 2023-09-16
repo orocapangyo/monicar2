@@ -14,6 +14,14 @@
 #include <geometry_msgs/Twist.h>
 #include <PID_v1.h>
 
+#define MOTOR_1860 1
+#define MOTOR_620 2
+#define MOTOR_TYPE MOTOR_620
+
+#define PRINT_VEL 0
+#define PRINT_PIDERR 0
+#define PRINT_AVGPWM 0
+
 double trackAdjustValueL = 0.0;
 double trackSetpointL = 0.0;
 double trackErrorL = 0.0;
@@ -21,9 +29,9 @@ double trackAdjustValueR = 0.0;
 double trackSetpointR = 0.0;
 double trackErrorR = 0.0;
 
-double Kp = 5.0;   //Determines how aggressively the PID reacts to the current amount of error (Proportional)
-double Ki = 10.0;  //Determines how aggressively the PID reacts to error over time (Integral)
-double Kd = 1.0;   //Determines how aggressively the PID reacts to the change in error (Derivative)
+double Kp = 2.0;   //Determines how aggressively the PID reacts to the current amount of error (Proportional)
+double Ki = 20.0;  //Determines how aggressively the PID reacts to error over time (Integral)
+double Kd = 0.0;   //Determines how aggressively the PID reacts to the change in error (Derivative)
 
 PID trackPIDLeft(&trackErrorL, &trackAdjustValueL, &trackSetpointL, Kp, Ki, Kd, DIRECT);
 PID trackPIDRight(&trackErrorR, &trackAdjustValueR, &trackSetpointR, Kp, Ki, Kd, DIRECT);
@@ -74,18 +82,26 @@ long currentMillis = 0;
 // Distance from center of the left tire to the center of the right tire in m. We won't use this in this code.
 // Number of ticks a wheel makes moving a linear distance of 1 meter
 // This value was measured manually.
-#define TICKS_PER_REVOLUTION (1860.0)
 #define TICKS_PER_METER (TICKS_PER_REVOLUTION / (2.0 * 3.141592 * WHEEL_RADIUS))
 #define WHEEL_BASE (0.160)
 
+#if MOTOR_TYPE == MOTOR_1860
 #define K_P 1125.0
-#define K_b 10
+#define K_b 30
 #define PWM_MIN 43.0   // about 0.03 m/s
-#define PWM_MAX 235.0  // about 0.2 m/s
+#define PWM_MAX 245.0  // about 0.2 m/s
+#define TICKS_PER_REVOLUTION (1860.0)
+#define K_bias 0.0
+#else
+#define K_P 1227.0
+#define K_b 14
+#define PWM_MIN 63.0   // about 0.04 m/s
+#define PWM_MAX 250.0  // about 0.2 m/s
+#define TICKS_PER_REVOLUTION (620.0)
+#define K_bias (-10.0)
+#endif
 
 #define PWM_TURN (PWM_MIN)
-// How much the PWM value can change each cycle
-#define PWM_INCREMENT 8
 
 // Set linear velocity and PWM variable values for each wheel
 float velLeftWheel = 0.0;
@@ -102,11 +118,10 @@ bool blinkState = false;
 
 #define NUM_READ 10
 float linearx = 0.0, angularz = 0.0;
-// if Vright readch input speed, then average pwmOut
-int doAvg = 0;
 int avgPWML[NUM_READ], avgPWMR[NUM_READ];
 int readIndex = 0;
-int total = 0;
+int totalL = 0, totalR = 0;
+
 /////////////////////// Tick Data Publishing Functions ////////////////////////
 // Increment the number of ticks
 void IRAM_ATTR left_wheel_tick() {
@@ -187,14 +202,12 @@ void calc_vel_left_wheel() {
 
   // Update the timestamp
   prevTime = (millis() / 1000.0);
+#if PRINT_VEL == 1
   Serial.print("L:");
   Serial.print(velLeftWheel, 3);
   Serial.print(", ");
   Serial.println(numOfTicks);
-
-  //if speed reach to 98~102% of target, then start to measure average
-  if ((velLeftWheel > linearx * 0.98) && (velLeftWheel < linearx * 1.02))
-    doAvg = 1;
+#endif
 }
 
 // Calculate the right wheel linear velocity in m/s every time a
@@ -221,14 +234,12 @@ void calc_vel_right_wheel() {
   // Update the timestamp
   prevTime = (millis() / 1000.0);
 
+#if PRINT_VEL == 1
   Serial.print("R:");
   Serial.print(velRightWheel, 3);
   Serial.print(", ");
   Serial.println(numOfTicks);
-
-  //if speed reach to 98~102% of target, then start to measure average
-  if ((velRightWheel > linearx * 0.98) && (velRightWheel < linearx * 1.02))
-    doAvg = 1;
+#endif
 }
 
 // Take the velocity command as input and calculate the PWM values.
@@ -239,9 +250,9 @@ void calc_pwm_values(float linearx, float angularz) {
 
   if (vLeft >= 0.0) {
     // Calculate the PWM value given the desired velocity
-    pwmLeftReq = int(K_P * vLeft + K_b);
+    pwmLeftReq = int(K_P * vLeft + K_b + K_bias);
   } else {
-    pwmLeftReq = int(K_P * vLeft - K_b);
+    pwmLeftReq = int(K_P * vLeft - K_b - K_bias);
   }
   if (vRight >= 0.0) {
     // Calculate the PWM value given the desired velocity
@@ -269,14 +280,14 @@ void calc_pwm_values(float linearx, float angularz) {
   trackErrorR = 0.0;
   trackPIDRight.SetMode(AUTOMATIC);
 
-  Serial.print("cPWM:");
+  Serial.print("calPWM:");
   Serial.print(pwmLeftReq);
   Serial.print(":");
   Serial.println(pwmRightReq);
 }
 
 void set_pwm_values() {
-
+  int average, pwm_inc;
   // These variables will hold our desired PWM values
   static int pwmLeftOut = 0;
   static int pwmRightOut = 0;
@@ -319,12 +330,18 @@ void set_pwm_values() {
   Serial.print(":");
   Serial.println(pwmRightReq);
 
+  if ((abs(pwmLeftReq) - pwmLeftOut) > 16)
+    pwm_inc = 8;
+  else if ((pwmLeftOut - abs(pwmLeftReq)) > 16)
+    pwm_inc = 8;
+  else
+    pwm_inc = 1;
+
   // Calculate the output PWM value by making slow changes to the current value
   if (abs(pwmLeftReq) > pwmLeftOut) {
-    pwmLeftOut += PWM_INCREMENT;
+    pwmLeftOut += pwm_inc;
   } else if (abs(pwmLeftReq) < pwmLeftOut) {
-    pwmLeftOut -= PWM_INCREMENT;
-
+    pwmLeftOut -= pwm_inc;
   } else {
     // reached calculated PWM, then start PID
     // not stop case, run PID
@@ -336,9 +353,9 @@ void set_pwm_values() {
   }
 
   if (abs(pwmRightReq) > pwmRightOut) {
-    pwmRightOut += PWM_INCREMENT;
+    pwmRightOut += pwm_inc;
   } else if (abs(pwmRightReq) < pwmRightOut) {
-    pwmRightOut -= PWM_INCREMENT;
+    pwmRightOut -= pwm_inc;
   } else {
     // reached calculated PWM, then start PID
 
@@ -358,56 +375,49 @@ void set_pwm_values() {
   Serial.print(":");
   Serial.println(pwmRightOut);
 
-  if (doAvg == 1) {
-    int average;
+#if PRINT_AVGPWM == 1
+  // subtract the last reading:
+  totalL = totalL - avgPWML[readIndex];
+  // read from the sensor:
+  avgPWML[readIndex] = pwmLeftOut;
+  // add the reading to the total:
+  totalL = totalL + avgPWML[readIndex];
 
-    // subtract the last reading:
-    total = total - avgPWML[readIndex];
-    // read from the sensor:
-    avgPWML[readIndex] = pwmLeftOut;
-    // add the reading to the total:
-    total = total + avgPWML[readIndex];
-    // advance to the next position in the array:
-    readIndex = readIndex + 1;
-    // if we're at the end of the array...
-    if (readIndex >= NUM_READ) {
-      // ...wrap around to the beginning:
-      readIndex = 0;
-    }
-    // calculate the average:
-    average = total / NUM_READ;
-    Serial.print("avgPWM:");
-    Serial.print(average);
+  // calculate the average:
+  average = totalL / NUM_READ;
+  Serial.print("avgPWM:");
+  Serial.print(average);
 
-    // subtract the last reading:
-    total = total - avgPWMR[readIndex];
-    // read from the sensor:
-    avgPWMR[readIndex] = pwmLeftOut;
-    // add the reading to the total:
-    total = total + avgPWMR[readIndex];
-    // advance to the next position in the array:
-    readIndex = readIndex + 1;
+  // subtract the last reading:
+  totalR = totalR - avgPWMR[readIndex];
+  // read from the sensor:
+  avgPWMR[readIndex] = pwmRightOut;
+  // add the reading to the total:
+  totalR = totalR + avgPWMR[readIndex];
 
-    // if we're at the end of the array...
-    if (readIndex >= NUM_READ) {
-      // ...wrap around to the beginning:
-      readIndex = 0;
-    }
-    // calculate the average:
-    average = total / NUM_READ;
-
-    Serial.print(":");
-    Serial.println(average);
+  // calculate the average:
+  average = totalR / NUM_READ;
+  Serial.print(":");
+  Serial.println(average);
+  // advance to the next position in the array:
+  readIndex = readIndex + 1;
+  // if we're at the end of the array...
+  if (readIndex >= NUM_READ) {
+    // ...wrap around to the beginning:
+    readIndex = 0;
   }
-
-  //Serial.print("sErr:");
-  //Serial.print(trackErrorL, 3);
-  //Serial.print(":");
-  //Serial.println(trackErrorR, 3);
+#endif
 
   // PWM output cannot be less than 0
   pwmLeftOut = (pwmLeftOut < 0) ? 0 : pwmLeftOut;
   pwmRightOut = (pwmRightOut < 0) ? 0 : pwmRightOut;
+
+#if PRINT_PIDERR == 1
+  Serial.print("sErr:");
+  Serial.print(trackErrorL, 3);
+  Serial.print(":");
+  Serial.println(trackErrorR, 3);
+#endif
 
   if (pwmLeftOut > 0) {
     // Set the PWM value on the pins
@@ -481,16 +491,18 @@ void loop() {
   if (Serial.available() > 0) {
     linearx = Serial.parseFloat();
     angularz = Serial.parseFloat();
-    doAvg = 0;
     readIndex = 0;
-    total = 0;
+    totalL = 0;
+    totalR = 0;
     for (int i = 0; i < NUM_READ; i++) {
       avgPWML[i] = 0;
       avgPWMR[i] = 0;
     }
     //prints the received float number
-    Serial.println(linearx);
-    Serial.println(angularz);
+    Serial.print("cmd:");
+    Serial.print(linearx, 3);
+    Serial.print(",");
+    Serial.println(angularz, 3);
     calc_pwm_values(linearx, angularz);
   }
 
@@ -503,8 +515,9 @@ void loop() {
     digitalWrite(LED_BUILTIN, blinkState);
 
     // Calculate the velocity of the right and left wheels
-    calc_vel_right_wheel();
     calc_vel_left_wheel();
+    calc_vel_right_wheel();
+
     set_pwm_values();
   }
 }
