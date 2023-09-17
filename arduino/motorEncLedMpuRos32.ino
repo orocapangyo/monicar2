@@ -19,6 +19,8 @@
 #include <rcl/error_handling.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
+#include <rmw_microros/rmw_microros.h>
+
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/float32.h>
 #include <geometry_msgs/msg/twist.h>
@@ -56,6 +58,13 @@ rclc_executor_t executor;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
+
+enum states {
+  WAITING_AGENT,
+  AGENT_AVAILABLE,
+  AGENT_CONNECTED,
+  AGENT_DISCONNECTED
+} state;
 
 #define RXD2 16
 #define TXD2 17
@@ -203,23 +212,18 @@ void ICACHE_RAM_ATTR dmpDataReady() {
 #define RCCHECK(fn) \
   { \
     rcl_ret_t temp_rc = fn; \
-    if ((temp_rc != RCL_RET_OK)) { \
-      char buffer[40]; \
-      sprintf(buffer, "Failed status on line %d: %d. Aborting.\n", __LINE__, (int)temp_rc); \
-      DEBUG_PRINTLN(buffer); \
-      vTaskDelete(NULL); \
-    } \
+    if ((temp_rc != RCL_RET_OK)) { return false; } \
   }
 
-#define RCSOFTCHECK(fn) \
-  { \
-    rcl_ret_t temp_rc = fn; \
-    if ((temp_rc != RCL_RET_OK)) { \
-      char buffer[40]; \
-      sprintf(buffer, "Failed status on line %d: %d. Aborting.\n", __LINE__, (int)temp_rc); \
-      DEBUG_PRINTLN(buffer); \
+#define EXECUTE_EVERY_N_MS(MS, X) \
+  do { \
+    static volatile int64_t init = -1; \
+    if (init == -1) { init = uxr_millis(); } \
+    if (uxr_millis() - init > MS) { \
+      X; \
+      init = uxr_millis(); \
     } \
-  }
+  } while (0)
 
 /////////////////////// Tick Data Publishing Functions ////////////////////////
 // Increment the number of ticks
@@ -386,7 +390,7 @@ void cmd_vel_callback(const void *msgin) {
 }
 
 void set_pwm_values() {
-  int average, pwm_inc;
+  int pwm_inc;
   // These variables will hold our desired PWM values
   static int pwmLeftOut = 0;
   static int pwmRightOut = 0;
@@ -542,6 +546,88 @@ void subled_callback(const void *msgin) {
   RGB(LEDBEHAV(msg->data));
 }
 
+// Functions create_entities and destroy_entities can take several seconds.
+// In order to reduce this rebuild the library with
+// - RMW_UXRCE_ENTITY_CREATION_DESTROY_TIMEOUT=0
+// - UCLIENT_MAX_SESSION_CONNECTION_ATTEMPTS=3
+
+bool create_entities() {
+  allocator = rcl_get_default_allocator();
+
+  //create allocator
+  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  DEBUG_PRINTLN("rclc_support_init done");
+
+  rcl_node_options_t node_ops = rcl_node_get_default_options();
+  node_ops.domain_id = 108;
+  RCCHECK(rclc_node_init_with_options(&node, "uros_arduino_node", "", &support, &node_ops));
+  DEBUG_PRINTLN("rclc_node_init done");
+
+  // create publisher
+  RCCHECK(rclc_publisher_init_best_effort(
+    &right_pub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    "right_ticks"));
+
+  // create publisher
+  RCCHECK(rclc_publisher_init_best_effort(
+    &left_pub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    "left_ticks"));
+
+  // create publisher
+  RCCHECK(rclc_publisher_init_best_effort(
+    &quat_pub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Quaternion),
+    "quaternion"));
+
+  // create subscriber
+  RCCHECK(rclc_subscription_init_best_effort(
+    &ledSub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
+    "ledSub"));
+
+  // create cmd_vel subscriber
+  RCCHECK(rclc_subscription_init_best_effort(
+    &cmd_vel_sub,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+    "cmd_vel"));
+
+  // create executor
+  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
+  RCCHECK(rclc_executor_add_subscription(&executor, &ledSub, &ledMsg, &subled_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_sub, &cmd_vel, cmd_vel_callback, ON_NEW_DATA));
+
+  DEBUG_PRINTLN("create_entities done");
+  return true;
+}
+
+void destroy_entities() {
+  rmw_context_t *rmw_context = rcl_context_get_rmw_context(&support.context);
+  (void)rmw_uros_set_context_entity_destroy_session_timeout(rmw_context, 0);
+
+  //subscriber finish
+  rcl_subscription_fini(&ledSub, &node);
+  rcl_subscription_fini(&cmd_vel_sub, &node);
+  //publisher finish
+  rcl_publisher_fini(&left_pub, &node);
+  rcl_publisher_fini(&right_pub, &node);
+#if IMU == 1
+  rcl_publisher_fini(&quat_pub, &node);
+#endif
+  // node, excutor finish
+  rclc_executor_fini(&executor);
+  rcl_node_fini(&node);
+  rclc_support_fini(&support);
+
+  DEBUG_PRINTLN("destroy_entities done");
+}
+
 void setup() {
 #if (DEBUG == 1)
   Serial2.begin(115200);
@@ -591,65 +677,6 @@ void setup() {
   // configure LED for output
   pinMode(LED_BUILTIN, OUTPUT);
 
-  // ROS Setup
-  DEBUG_PRINTLN("ROS Starts");
-
-  set_microros_transports();
-  delay(2000);
-
-  allocator = rcl_get_default_allocator();
-
-  //create allocator
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
-  DEBUG_PRINTLN("rclc_support_init done");
-
-  rcl_node_options_t node_ops = rcl_node_get_default_options();
-  node_ops.domain_id = 108;
-  RCCHECK(rclc_node_init_with_options(&node, "uros_arduino_node", "", &support, &node_ops));
-  DEBUG_PRINTLN("rclc_node_init done");
-
-  // create publisher
-  RCCHECK(rclc_publisher_init_default(
-    &right_pub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "right_ticks"));
-
-  // create publisher
-  RCCHECK(rclc_publisher_init_default(
-    &left_pub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "left_ticks"));
-
-  // create publisher
-  RCCHECK(rclc_publisher_init_default(
-    &quat_pub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Quaternion),
-    "quaternion"));
-
-  // create subscriber
-  RCCHECK(rclc_subscription_init_best_effort(
-    &ledSub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "ledSub"));
-
-  // create cmd_vel subscriber
-  RCCHECK(rclc_subscription_init_best_effort(
-    &cmd_vel_sub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-    "cmd_vel"));
-
-  // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
-  RCCHECK(rclc_executor_add_subscription(&executor, &ledSub, &ledMsg, &subled_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_sub, &cmd_vel, cmd_vel_callback, ON_NEW_DATA));
-
-  DEBUG_PRINTLN("ROS established");
-
   trackPIDLeft.SetMode(AUTOMATIC);
   trackPIDLeft.SetSampleTime(200);
   trackPIDLeft.SetOutputLimits(-20, 20);
@@ -661,11 +688,43 @@ void setup() {
   mpu_setup();
 #endif
 
+  // ROS Setup
+  DEBUG_PRINTLN("ROS Starts");
+  set_microros_transports();
+  state = WAITING_AGENT;
+
   DEBUG_PRINTLN("Done setup");
 }
 
 void loop() {
-  RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10)));
+  switch (state) {
+    case WAITING_AGENT:
+      EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
+      break;
+    case AGENT_AVAILABLE:
+      state = (true == create_entities()) ? AGENT_CONNECTED : WAITING_AGENT;
+      if (state == WAITING_AGENT) {
+        destroy_entities();
+      };
+      break;
+    case AGENT_CONNECTED:
+      EXECUTE_EVERY_N_MS(200, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
+      if (state == AGENT_CONNECTED) {
+        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
+        rcl_publish(&left_pub, &left_wheel_tick_count, NULL);
+        rcl_publish(&right_pub, &right_wheel_tick_count, NULL);
+#if USE_IMU == 1
+        mpu_loop();
+#endif
+      }
+      break;
+    case AGENT_DISCONNECTED:
+      destroy_entities();
+      state = WAITING_AGENT;
+      break;
+    default:
+      break;
+  }
 
   // Record the time
   currentMillis = millis();
@@ -678,11 +737,6 @@ void loop() {
     // Calculate the velocity of the right and left wheels
     calc_vel_left_wheel();
     calc_vel_right_wheel();
-
-    RCSOFTCHECK(rcl_publish(&left_pub, &left_wheel_tick_count, NULL));
-    RCSOFTCHECK(rcl_publish(&right_pub, &right_wheel_tick_count, NULL));
-
-    mpu_loop();
 
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     //buzzer beep if robot move reverse
@@ -701,6 +755,7 @@ void loop() {
   set_pwm_values();
 }
 
+#if USE_IMU == 1
 void mpu_setup() {
   // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -770,6 +825,7 @@ void mpu_loop() {
   if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {  // Get the Latest packet
     // display quaternion values in easy matrix form: w x y z
     mpu.dmpGetQuaternion(&q, fifoBuffer);
+#if 0
     DEBUG_PRINT("quat\t");
     DEBUG_PRINT(q.w);
     DEBUG_PRINT("\t");
@@ -778,11 +834,13 @@ void mpu_loop() {
     DEBUG_PRINT(q.y);
     DEBUG_PRINT("\t");
     DEBUG_PRINTLN(q.z);
+#endif
     quat_msg.w = q.w;
     quat_msg.x = q.x;
     quat_msg.y = q.y;
     quat_msg.z = q.z;
 
-    RCSOFTCHECK(rcl_publish(&quat_pub, &quat_msg, NULL));
+    rcl_publish(&quat_pub, &quat_msg, NULL);
   }
 }
+#endif
