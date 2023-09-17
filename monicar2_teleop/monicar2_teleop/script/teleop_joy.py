@@ -61,7 +61,7 @@ class TeleopJoyNode(Node):
 
     def __init__(self):
         super().__init__('teleop_joy_node')
-        self.declare_parameters(# bring the param from yaml file
+        self.declare_parameters(    # bring the param from yaml file
             namespace='',
             parameters=[ 
                 ('max_fwd_m_s', None),
@@ -74,7 +74,7 @@ class TeleopJoyNode(Node):
         self.colorIdx = 0
         self.headlight_on = False
         self.mode_button_last =0
-        self.colorIdx = 0 # variable for saving data in ledSub's msg data field
+        self.colorIdx = 0           # variable for saving data in ledSub's msg data field
         self.pub_led = self.create_publisher(Int32, 'ledSub',10) 
         print(' Monicar Teleop Joystick controller')
         print(msg)       
@@ -90,14 +90,16 @@ class TeleopJoyNode(Node):
             self.max_ang_vel)
 
         )
-
         print('CTRL-C to quit')
 
         self.qos = QoSProfile(depth=10)
-        self.pub_twist = self.create_publisher(Twist, 'cmd_vel', self.qos) # generate publisher for 'cmd_vel'#cmd_vel토픽에 Twist msg를 발행하는 publisher
-        self.sub = self.create_subscription(Joy, 'joy', self.cb_joy, 10) # generate publisher for 'ledSub
+        self.pub_twist = self.create_publisher(Twist, 'cmd_vel', self.qos) 
+        # generate publisher for 'cmd_vel'
+        self.sub = self.create_subscription(Joy, 'joy', self.cb_joy, 10) 
+        # generate publisher for 'ledSub
         self.timer = self.create_timer(0.05, self.cb_timer)
-        self.twist = Twist()  #generate variable for Twist type msg
+        self.twist = Twist()  
+        #generate variable for Twist type msg
 
     def cb_joy(self, joymsg):
         if joymsg.buttons[2] == 1 and self.mode_button_last == 0:
@@ -120,29 +122,21 @@ class TeleopJoyNode(Node):
             if self.colorIdx>MAXCOLOR: 
                 self.colorIdx=0
 
-
-
-
-
-        self.twist.linear.y = 0.0;
-	self.twist.linear.z = 0.0
-        self.twist.angular.x = 0.0;
-        self.twist.angular.y = 0.0;
+        self.twist.linear.y = 0.0
+        self.twist.linear.z = 0.0
+        self.twist.angular.x = 0.0
+        self.twist.angular.y = 0.0
         self.twist.angular.z = joymsg.axes[0] * self.max_ang_vel
         print('V= %.2f m/s, W= %.2f deg/s'%(self.twist.linear.x, self.twist.angular.z))
-
-
-
 
     def cb_timer(self):
         self.timer_inc+=1
         if self.auto_mode == False:
-            self.pub_twist.publish(self.twist) #publishing 'cmd_vel'
+            self.pub_twist.publish(self.twist)  #publishing 'cmd_vel'
 
-        led_msg = Int32()  #generate variable for Int32 type msg
+        led_msg = Int32()                       #generate variable for Int32 type msg
         led_msg.data = self.colorIdx 
-        self.pub_led.publish(led_msg) #publishing 'ledSub'
-
+        self.pub_led.publish(led_msg)           #publishing 'ledSub'
 
 def main(args=None):
     rclpy.init(args=args) 

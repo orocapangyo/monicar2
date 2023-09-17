@@ -90,9 +90,9 @@ def get_key(settings):
         return msvcrt.getch().decode('utf-8')
     tty.setraw(sys.stdin.fileno()) 
     rlist, _, _ = select.select([sys.stdin], [], [], 0.1)  
-    if rlist:  # 유효하면 key에 저장
+    if rlist:  # if valid, save to key
         key = sys.stdin.read(1)
-    else:  # 아니면 초기화
+    else:       # else, initialize
         key = ''
 
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)  
@@ -109,7 +109,7 @@ def print_vels(target_linear_velocity, target_angular_velocity):
 def make_simple_profile(output, input, slop): 
     if input > output: 
         output = min(input, output + slop)  
-    elif input < output:  # 변화가 크면(목표값 초과)
+    elif input < output:  # if variance is bigger
         output = max(input, output - slop)  
     else:
         output = input
@@ -142,41 +142,39 @@ def main():
     rclpy.init()  
 
     qos = QoSProfile(depth=10) 
-    node = rclpy.create_node('teleop_keyboard_node')  # generate node 
-    pub = node.create_publisher(Twist, 'cmd_vel', qos) # generate publisher for 'cmd_vel'
-    ledpub = node.create_publisher(Int32, 'ledSub',10) # generate publisher for 'ledSub'
-
+    node = rclpy.create_node('teleop_keyboard_node')    # generate node 
+    pub = node.create_publisher(Twist, 'cmd_vel', qos)  # generate publisher for 'cmd_vel'
+    ledpub = node.create_publisher(Int32, 'ledSub',10)  # generate publisher for 'ledSub'
 
     print('Monicar Teleop Keyboard controller')
-
 
     status = 0
     target_linear_velocity = 0.0
     target_angular_velocity = 0.0
     control_linear_velocity = 0.0
     control_angular_velocity = 0.0
-    colorIdx = 0  # variable for saving data in ledSub's msg data field 
+    colorIdx = 0                                        # variable for saving data in ledSub's msg data field 
 
     try:
         print(msg)
         while(1):
             key = get_key(settings)
-            if key == 'w':  # linear speed up
+            if key == 'w':              # linear speed up
                 target_linear_velocity = \
                     check_linear_limit_velocity(target_linear_velocity + LIN_VEL_STEP_SIZE)
                 status = status + 1
                 print_vels(target_linear_velocity, target_angular_velocity)
-            elif key == 'x':  # linear speed down
+            elif key == 'x':            # linear speed down
                 target_linear_velocity = \
                     check_linear_limit_velocity(target_linear_velocity - LIN_VEL_STEP_SIZE)
                 status = status + 1
                 print_vels(target_linear_velocity, target_angular_velocity)
-            elif key == 'a':  # left angle spped up
+            elif key == 'a':            # left angle spped up
                 target_angular_velocity = \
                     check_angular_limit_velocity(target_angular_velocity + ANG_VEL_STEP_SIZE)
                 status = status + 1
                 print_vels(target_linear_velocity, target_angular_velocity)
-            elif key == 'd':   # right angle spped up
+            elif key == 'd':            # right angle spped up
                 target_angular_velocity = \
                     check_angular_limit_velocity(target_angular_velocity - ANG_VEL_STEP_SIZE)
                 status = status + 1
@@ -187,16 +185,10 @@ def main():
                 target_angular_velocity = 0.0
                 control_angular_velocity = 0.0
                 print_vels(target_linear_velocity, target_angular_velocity)
-            elif key == 'c':  # led control
+            elif key == 'c':            # led control
                 colorIdx += 1
                 if colorIdx > MAXCOLOR:
                     colorIdx = 0
-
-
-
-
-
-
             else:
                 if (key == '\x03'):
                     break
@@ -205,7 +197,7 @@ def main():
                 print(msg)  
                 status = 0
 
-            twist = Twist()  #generate variable for Twist type msg
+            twist = Twist()         #generate variable for Twist type msg
 
             control_linear_velocity = make_simple_profile(  
                 control_linear_velocity,
@@ -224,8 +216,8 @@ def main():
             twist.angular.y = 0.0
             twist.angular.z = control_angular_velocity
 
-            pub.publish(twist)  #publishing 'cmd_vel'
-            led_msg = Int32() #generate variable for Int32 type msg
+            pub.publish(twist)      #publishing 'cmd_vel'
+            led_msg = Int32()       #generate variable for Int32 type msg
             led_msg.data = colorIdx
             ledpub.publish(led_msg) #publishing 'ledSub'
 
