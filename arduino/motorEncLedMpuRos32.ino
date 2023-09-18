@@ -19,6 +19,8 @@
 #include <rcl/error_handling.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
+#include <rmw_microros/rmw_microros.h>
+
 #include <std_msgs/msg/int32.h>
 #include <std_msgs/msg/float32.h>
 #include <geometry_msgs/msg/twist.h>
@@ -56,6 +58,13 @@ rclc_executor_t executor;
 rclc_support_t support;
 rcl_allocator_t allocator;
 rcl_node_t node;
+
+enum states {
+  WAITING_AGENT,
+  AGENT_AVAILABLE,
+  AGENT_CONNECTED,
+  AGENT_DISCONNECTED
+} state;
 
 #define RXD2 16
 #define TXD2 17
@@ -159,7 +168,7 @@ long currentMillis = 0;
 #define PWM_MAX 250.0  // about 0.2 m/s
 #define TICKS_PER_REVOLUTION (620.0)
 #define K_bias (-10.0)
-#define INTERVAL 90
+#define INTERVAL 30
 #endif
 
 #define PWM_TURN (PWM_MIN)
@@ -207,7 +216,6 @@ void ICACHE_RAM_ATTR dmpDataReady() {
       char buffer[40]; \
       sprintf(buffer, "Failed status on line %d: %d. Aborting.\n", __LINE__, (int)temp_rc); \
       DEBUG_PRINTLN(buffer); \
-      vTaskDelete(NULL); \
     } \
   }
 
@@ -220,6 +228,16 @@ void ICACHE_RAM_ATTR dmpDataReady() {
       DEBUG_PRINTLN(buffer); \
     } \
   }
+
+#define EXECUTE_EVERY_N_MS(MS, X) \
+  do { \
+    static volatile int64_t init = -1; \
+    if (init == -1) { init = uxr_millis(); } \
+    if (uxr_millis() - init > MS) { \
+      X; \
+      init = uxr_millis(); \
+    } \
+  } while (0)
 
 /////////////////////// Tick Data Publishing Functions ////////////////////////
 // Increment the number of ticks
@@ -386,7 +404,7 @@ void cmd_vel_callback(const void *msgin) {
 }
 
 void set_pwm_values() {
-  int average, pwm_inc;
+  int pwm_inc;
   // These variables will hold our desired PWM values
   static int pwmLeftOut = 0;
   static int pwmRightOut = 0;
@@ -420,10 +438,12 @@ void set_pwm_values() {
     digitalWrite(BIN2, LOW);
   }
 
+#if 0
   DEBUG_PRINT("sReq:");
   DEBUG_PRINT(pwmLeftReq);
   DEBUG_PRINT(":");
   DEBUG_PRINTLN(pwmRightReq);
+#endif
 
   if ((abs(pwmLeftReq) - pwmLeftOut) > 16)
     pwm_inc = 8;
@@ -465,10 +485,12 @@ void set_pwm_values() {
   pwmLeftOut = (pwmLeftOut > PWM_MAX) ? PWM_MAX : pwmLeftOut;
   pwmRightOut = (pwmRightOut > PWM_MAX) ? PWM_MAX : pwmRightOut;
 
+#if 0
   DEBUG_PRINT("sOut:");
   DEBUG_PRINT(pwmLeftOut);
   DEBUG_PRINT(":");
   DEBUG_PRINTLN(pwmRightOut);
+#endif
 
   // PWM output cannot be less than 0
   pwmLeftOut = (pwmLeftOut < 0) ? 0 : pwmLeftOut;
@@ -543,6 +565,7 @@ void subled_callback(const void *msgin) {
 }
 
 void setup() {
+  int i;
 #if (DEBUG == 1)
   Serial2.begin(115200);
   Serial2.begin(115200, SERIAL_8N1, RXD2, TXD2);
@@ -591,11 +614,34 @@ void setup() {
   // configure LED for output
   pinMode(LED_BUILTIN, OUTPUT);
 
+  trackPIDLeft.SetMode(AUTOMATIC);
+  trackPIDLeft.SetSampleTime(200);
+  trackPIDLeft.SetOutputLimits(-20, 20);
+  trackPIDRight.SetMode(AUTOMATIC);
+  trackPIDRight.SetSampleTime(200);
+  trackPIDRight.SetOutputLimits(-20, 20);
+
+#if USE_IMU == 1
+  mpu_setup();
+#endif
+
   // ROS Setup
   DEBUG_PRINTLN("ROS Starts");
 
   set_microros_transports();
   delay(2000);
+
+  //wait agent comes up
+  do {
+    EXECUTE_EVERY_N_MS(300, state = (RMW_RET_OK == rmw_uros_ping_agent(100, 1)) ? AGENT_AVAILABLE : WAITING_AGENT;);
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    delay(300);
+
+    if ((i++ % 32) == 0) DEBUG_PRINT("\n");
+    else DEBUG_PRINT(".");
+    if (state == AGENT_AVAILABLE)
+      break;
+  } while (1);
 
   allocator = rcl_get_default_allocator();
 
@@ -649,23 +695,28 @@ void setup() {
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_sub, &cmd_vel, cmd_vel_callback, ON_NEW_DATA));
 
   DEBUG_PRINTLN("ROS established");
-
-  trackPIDLeft.SetMode(AUTOMATIC);
-  trackPIDLeft.SetSampleTime(200);
-  trackPIDLeft.SetOutputLimits(-20, 20);
-  trackPIDRight.SetMode(AUTOMATIC);
-  trackPIDRight.SetSampleTime(200);
-  trackPIDRight.SetOutputLimits(-20, 20);
-
-#if USE_IMU == 1
-  mpu_setup();
-#endif
-
   DEBUG_PRINTLN("Done setup");
 }
 
 void loop() {
-  RCSOFTCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10)));
+  switch (state) {
+    case AGENT_AVAILABLE:
+      //if setup done, always here. then go to next step
+      state = AGENT_CONNECTED;
+      break;
+    case AGENT_CONNECTED:
+      EXECUTE_EVERY_N_MS(500, state = (RMW_RET_OK == rmw_uros_ping_agent(30, 1)) ? AGENT_CONNECTED : AGENT_DISCONNECTED;);
+      if (state == AGENT_CONNECTED) {
+        rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10));
+      }
+      break;
+    case AGENT_DISCONNECTED:
+      //if ping doesn't work, then reset board(=wait agent comes up)
+      ESP.restart();
+      break;
+    default:
+      break;
+  }
 
   // Record the time
   currentMillis = millis();
@@ -681,6 +732,7 @@ void loop() {
 
     RCSOFTCHECK(rcl_publish(&left_pub, &left_wheel_tick_count, NULL));
     RCSOFTCHECK(rcl_publish(&right_pub, &right_wheel_tick_count, NULL));
+    RCSOFTCHECK(rcl_publish(&quat_pub, &quat_msg, NULL));
 
     mpu_loop();
 
@@ -701,6 +753,7 @@ void loop() {
   set_pwm_values();
 }
 
+#if USE_IMU == 1
 void mpu_setup() {
   // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -770,6 +823,7 @@ void mpu_loop() {
   if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {  // Get the Latest packet
     // display quaternion values in easy matrix form: w x y z
     mpu.dmpGetQuaternion(&q, fifoBuffer);
+#if 0
     DEBUG_PRINT("quat\t");
     DEBUG_PRINT(q.w);
     DEBUG_PRINT("\t");
@@ -778,11 +832,11 @@ void mpu_loop() {
     DEBUG_PRINT(q.y);
     DEBUG_PRINT("\t");
     DEBUG_PRINTLN(q.z);
+#endif
     quat_msg.w = q.w;
     quat_msg.x = q.x;
     quat_msg.y = q.y;
     quat_msg.z = q.z;
-
-    RCSOFTCHECK(rcl_publish(&quat_pub, &quat_msg, NULL));
   }
 }
+#endif

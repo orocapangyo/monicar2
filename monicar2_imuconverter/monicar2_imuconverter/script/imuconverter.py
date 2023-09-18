@@ -7,10 +7,6 @@ from rclpy.logging import get_logger
 from sensor_msgs.msg import Imu
 from geometry_msgs.msg import Quaternion, TransformStamped
 from tf2_ros import TransformBroadcaster
-
-#from geometry_msgs.msg import PoseStamped
-
-import time
 import math
 
 class ImuNode(Node):
@@ -32,14 +28,10 @@ class ImuNode(Node):
         self.imuPub = self.create_publisher(Imu, 'imu/data', 10)
         self.get_logger().info("Imu publisher set")
         self.imu_msg = Imu()
-        # self.posePub = self.create_publisher(PoseStamped, 'pose', 10)
-        #self.get_logger().info("PoseStamped publisher set")
-        #self.pose_msg = PoseStamped()
 
         self.br = TransformBroadcaster(self)
 
         self.frame_id = self.declare_parameter('frame_id', 'imu_link').value
-        self.seq = 0
 
         linear_acceleration_stdev = 0.06
         angular_velocity_stdev = 0.005
@@ -84,19 +76,10 @@ class ImuNode(Node):
 
     def node_callback(self, msg):
         #self.get_logger().info("Received a /quaternion message!")
-        #self.get_logger().info("Components: [%0.2f, %0.2f]"%(msg.linear.x, msg.angular.z))
         self.imu_msg.header.frame_id = self.frame_id      
         self.imu_msg.header.stamp = self.get_clock().now().to_msg()
         self.imu_msg.orientation = msg
-
-        #self.pose_msg.header.frame_id = self.frame_id        
-        #self.pose_msg.header.stamp = self.get_clock().now().to_msg()
-        #self.pose_msg.pose.orientation = msg
-
-        #self.seq = self.seq + 1
-
         self.imuPub.publish(self.imu_msg)
-        #self.posePub.publish(self.pose_msg)
 
         t = TransformStamped()
 
