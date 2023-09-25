@@ -23,6 +23,7 @@ from nav_msgs.msg import Odometry
 from std_msgs.msg import Int32
 from geometry_msgs.msg import TransformStamped, Point, Pose, Quaternion, Twist, PoseStamped
 
+from rclpy.qos import QoSProfile
 from tf2_ros import TransformBroadcaster
 
 #Parameters
@@ -69,30 +70,26 @@ class ODOMNode(Node):
         self.right_ticks = 0
         self.last_left_ticks = 0
         self.last_right_ticks = 0
+
         self.x = 0.0
         self.y = 0.0
         self.th = 0.0
+
         self.vx =  0.0
         self.vy =  0.0
         self.vth =  0.0
 
-        #publisher, subscriber
-        self.odom_pub = self.create_publisher(Odometry, 'odom', 10)
+        self.qos = QoSProfile(depth=10)
+        self.odom_pub = self.create_publisher(Odometry, 'odom', self.qos)
         self.left_ticks_sub = self.create_subscription(Int32, 'left_ticks', self.leftTicksCallback, 10)
         self.right_ticks_sub = self.create_subscription(Int32, 'right_ticks', self.rightTicksCallback, 10)
         self.init_sub = self.create_subscription(PoseStamped, 'initial_2d', self.init2dCallback, 10)
         
-        #30ms timer
-        self.timer = self.create_timer(0.03, self.cb_timer)
+        self.timer_tick = 0.03
+        self.timer = self.create_timer(self.timer_tick , self.cb_timer)
 
-        #odom frame broadcaster
-        self.tBroad= TransformBroadcaster(self, 10)   #odom frame broadcaster
-        self.odom = Odometry()                          #odom information
-        self.odomTr= TransformStamped()
-        self.odomTr.header.frame_id = 'odom'
-        self.odomTr.child_frame_id = 'base_footprint'
-        self.odom.header.frame_id = 'odom'
-        self.odom.child_frame_id = 'base_footprint'
+         # Initialize the transform broadcaster
+        self.odom_broadcaster = TransformBroadcaster(self)
 
         # Mark current time
         self.last_time = self.get_clock().now().to_msg()
@@ -115,10 +112,9 @@ class ODOMNode(Node):
         print("initial_2d done")
 
     def cb_timer(self):
-
         if self.initialPose == 0:
                 return 1
-
+        
         # Dt calculate
         self.current_time = self.get_clock().now().to_msg()
         ct = self.current_time.sec + (self.current_time.nanosec/1e+9)
@@ -150,41 +146,59 @@ class ODOMNode(Node):
         self.x += dx  
         self.y += dy 
         self.th =(self.th+dth) %  (2 * pi)
+        
+        t = TransformStamped()
+
+        # Read message content and assign it to
+        # corresponding tf variables
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = 'odom'
+        t.child_frame_id = 'base_footprint'
+
+        # Turtle only exists in 2D, thus we get x and y translation
+        # coordinates from the message and set the z coordinate to 0
+        t.transform.translation.x = self.x
+        t.transform.translation.y = self.y
+        t.transform.translation.z = 0.0
 
         # For the same reason, turtle can only rotate around one axis
         # and this why we set rotation in x and y to 0 and obtain
         # rotation in z axis from the message
         odom_quat  = quaternion_from_euler(0, 0, self.th)
+        t.transform.rotation.x = odom_quat.x
+        t.transform.rotation.y = odom_quat.y
+        t.transform.rotation.z = odom_quat.z
+        t.transform.rotation.w = odom_quat.w
 
-        #if dt>0:
-        vx=dx/dt
-        vy=dy/dt
-        vth=dth/dt
+        # Send the transformation
+        self.odom_broadcaster.sendTransform(t)
+
+        # next, we'll publish the odometry message over ROS
+        if dt>0:
+            vx=dx/dt
+            vy=dy/dt
+            vth=dth/dt
+
+        odom = Odometry()
+        odom.header.frame_id = "odom"
+        odom.header.stamp = self.get_clock().now().to_msg()
 
         # set the position
-        self.odom.pose.pose.position.x = self.x
-        self.odom.pose.pose.position.y = self.y
-        self.odom.pose.pose.position.z = 0.0
-        self.odom.pose.pose.orientation.x = odom_quat.x
-        self.odom.pose.pose.orientation.y = odom_quat.y
-        self.odom.pose.pose.orientation.z = odom_quat.z
-        self.odom.pose.pose.orientation.w = odom_quat.w
-        # set the velocity
-        self.odom.twist.twist.linear.x = vx
-        self.odom.twist.twist.linear.y = vy
-        self.odom.twist.twist.angular.z = vth
-        # publish odom
-        self.odom_pub.publish(self.odom)
+        odom.pose.pose.position.x = self.x
+        odom.pose.pose.position.y = self.y
+        odom.pose.pose.position.z = 0.0
+        odom.pose.pose.orientation.x = odom_quat.x
+        odom.pose.pose.orientation.y = odom_quat.y
+        odom.pose.pose.orientation.z = odom_quat.z
+        odom.pose.pose.orientation.w = odom_quat.w
 
-        #tf broadcaster
-        self.odomTr.header.stamp = self.current_time
-        self.odomTr.transform.translation.x = self.odom.pose.pose.position.x
-        self.odomTr.transform.translation.y = self.odom.pose.pose.position.y
-        self.odomTr.transform.translation.z = self.odom.pose.pose.position.z
-        #includes x,y,z,w
-        self.odomTr.transform.rotation = self.odom.pose.pose.orientation
-        # Send the transformation
-        self.tBroad.sendTransform(self.odomTr)
+        # set the velocity
+        odom.child_frame_id = "base_footprint"
+        odom.twist.twist.linear.x = vx
+        odom.twist.twist.linear.y = vy
+        odom.twist.twist.angular.z = vth
+
+        self.odom_pub.publish(odom)
 
         self.last_left_ticks = self.left_ticks
         self.last_right_ticks = self.right_ticks

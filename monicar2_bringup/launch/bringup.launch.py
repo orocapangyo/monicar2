@@ -28,17 +28,6 @@ def generate_launch_description():
       PythonLaunchDescriptionSource([
         FindPackageShare("monicar2_bringup"), '/launch', '/rplidar.launch.py'])
     ), 
-    
-    Node(
-        package='tf2_ros', executable='static_transform_publisher', name='baseLkTolaserLk', 
-        arguments=['0.065', '0.0', '0.13', '0', '0', '0', 'base_link', 'laser_link'],
-        output='screen',
-    ),
 
-    Node(
-        package='tf2_ros', executable='static_transform_publisher', name='baseFtToBaseLk', 
-        arguments=['0.0', '0.0', '0.015', '0', '0', '0', 'base_footprint', 'base_link'],
-        output='screen',
-    ),
 
   ])

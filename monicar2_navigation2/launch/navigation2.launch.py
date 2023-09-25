@@ -34,7 +34,7 @@ def generate_launch_description():
         default=os.path.join(
             get_package_share_directory('monicar2_navigation2'),
             'map',
-            'turtlebot3_world.yaml'))
+            'mymap.yaml'))
 
     param_file_name = 'monicar2.yaml'
     param_dir = LaunchConfiguration(

@@ -21,13 +21,17 @@ class ImuNode(Node):
         self.get_logger().info("Setting Up the Node...")
 
         # Set subscriber
-        self.quatSub = self.create_subscription(Quaternion, 'quaternion', self.node_callback, 10)       
+        self.quatSub = self.create_subscription(Quaternion, 'quaternion', self.sub_callback, 10)       
         self.get_logger().info("quaternion subscriber set") 
         
         # Set publisher
         self.imuPub = self.create_publisher(Imu, 'imu/data', 10)
         self.get_logger().info("Imu publisher set")
         self.imu_msg = Imu()
+
+        #create timer
+        self.timer_tick = 0.03
+        self.timer = self.create_timer(self.timer_tick, self.cb_timer)
 
         self.br = TransformBroadcaster(self)
 
@@ -74,25 +78,44 @@ class ImuNode(Node):
             0.0, 0.0, linear_acceleration_cov
         ]
 
-    def node_callback(self, msg):
+    def sub_callback(self, msg):
         #self.get_logger().info("Received a /quaternion message!")
-        self.imu_msg.header.frame_id = self.frame_id      
+        self.imu_msg.orientation = msg   
+
+    def cb_timer(self):
+        self.imu_msg.header.frame_id = self.frame_id 
         self.imu_msg.header.stamp = self.get_clock().now().to_msg()
-        self.imu_msg.orientation = msg
         self.imuPub.publish(self.imu_msg)
 
         t = TransformStamped()
 
-        t.header.stamp = self.imu_msg.header.stamp
+        #static transform
+        t.header.frame_id = "base_footprint"
+        t.child_frame_id = "base_link"
+        t.transform.translation.x = 0.0
+        t.transform.translation.y = 0.0
+        t.transform.translation.z = 0.015
+        t.header.stamp = self.get_clock().now().to_msg()
+        self.br.sendTransform(t)
+
+        #static transform
+        t.header.frame_id = "base_link"
+        t.child_frame_id = "laser_link"
+        t.transform.translation.x = 0.065
+        t.transform.translation.y = 0.0
+        t.transform.translation.z = 0.13
+        t.header.stamp = self.get_clock().now().to_msg()
+        self.br.sendTransform(t)
+
+        #relative position, base_link -> imu_link
         t.header.frame_id = "base_link"
         t.child_frame_id = "imu_link"
-
-        #relative position base_link -> imu_link
         t.transform.translation.x = 0.065
         t.transform.translation.y = 0.0
         t.transform.translation.z = 0.06
-
-        t.transform.rotation =  self.imu_msg.orientation 
+        t.header.stamp = self.get_clock().now().to_msg()
+        #temporary disable
+        #t.transform.rotation =  self.imu_msg.orientation 
         self.br.sendTransform(t)
 
 def main(args=None):
