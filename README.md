@@ -1,4 +1,4 @@
-# Monicar2 DIY ROS navigation Robot
+# Monicar2 ROS navigation Robot
 This project is about ROS Package for navigation with DIY robot  
 Robot 3D model, BOM: Byungki  
 Circuit: Byungki, ZETA7    
@@ -8,8 +8,8 @@ ROS code: ZETA7, Alpha, Byungki
 
 # Especially Thanks
 Automatic Addision: https://automaticaddison.com/how-to-set-up-the-ros-navigation-stack-on-a-robot/  
-OMO R1 Mini: https://github.com/omorobot/omo_r1mini-foxy 
-ROBOTIZ: https://github.com/ROBOTIS-GIT/turtlebot3  
+OMO R1 Mini: https://github.com/omorobot/omo_r1mini-foxy    
+ROBOTIZ: https://github.com/ROBOTIS-GIT/turtlebot3       
 Other Open Source sites   
 
 ### Monicar2, it uses ESP32 NodeMcu
@@ -25,13 +25,6 @@ create_udev_rules_rplidar.sh, delete_udev_rules_rplidar.sh, rplidar.rules: udev 
 ## Overview
 <div align="center">
   <img src="images/monicar2.png">
-</div>
-
-## Circuit Block Diagram
-
-### Monicar II
-<div align="center">
-  <img src="images/2nd_bb.jpg" width="350" />
 </div>
 
 ## Installation
@@ -57,8 +50,8 @@ https://zeta7.notion.site/Monicar-II-1ae110a410024d2291aba25e90d10875?pvs=4
 ### Install dependency packages
 
 Following additional packages may be reuqired to be installed.  
-- ros-foxy-cartographer-ros ros-foxy-nav2-map-server \
-- ros-foxy-rqt-robot-steering ros-foxy-imu-tools \
+- ros-foxy-cartographer-ros ros-foxy-nav2-map-server 
+- ros-foxy-rqt-robot-steering ros-foxy-imu-tools 
 - ros-foxy-tf2-py ros-foxy-tf2-tools ros-foxy-nav2-bringup ros-foxy-navigation2
 ```bash
 sudo apt install -y ros-foxy-cartographer-ros ros-foxy-nav2-map-server \
