@@ -1,3 +1,4 @@
 odompub_node:
   ros__parameters:
     initialPose: 0
+    TPR: 1860.0

@@ -29,7 +29,6 @@ from tf2_ros import TransformBroadcaster
 #Parameters
 wheeltrack = 0.160
 wheelradius = 0.033
-TPR = 1860.0
 
 def quaternion_from_euler(roll, pitch, yaw):
     """
@@ -57,13 +56,15 @@ class ODOMNode(Node):
             namespace='',
             parameters=[
                 ('initialPose', None),
+                ('TPR', None),
             ])
 
         print('Odom publisher created')
 
         # Get parameter values
         self.initialPose = self.get_parameter_or('initialPose', Parameter('initialPose', Parameter.Type.INTEGER, 1)).get_parameter_value().integer_value
-        print('initialPose: %d' %(self.initialPose) )
+        self.TPR = self.get_parameter_or('TPR', Parameter('TPR', Parameter.Type.DOUBLE, 1860.0)).get_parameter_value().double_value
+        print('initialPose: %d, TRP: %s' %(self.initialPose, self.TPR) )
 
         #initialzie variable
         self.left_ticks = 0
@@ -123,8 +124,8 @@ class ODOMNode(Node):
         #Dth calculate
         delta_L = self.left_ticks - self.last_left_ticks
         delta_R = self.right_ticks - self.last_right_ticks
-        dl = 2 * pi * wheelradius * delta_L / TPR
-        dr = 2 * pi * wheelradius * delta_R / TPR
+        dl = 2 * pi * wheelradius * delta_L / self.TPR
+        dr = 2 * pi * wheelradius * delta_R / self.TPR
         dc = (dl + dr) / 2
         dth = (dr-dl)/wheeltrack
 
