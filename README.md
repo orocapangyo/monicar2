@@ -50,13 +50,13 @@ https://zeta7.notion.site/Monicar-II-1ae110a410024d2291aba25e90d10875?pvs=4
 ### Install dependency packages
 
 Following additional packages may be reuqired to be installed.  
-- ros-foxy-cartographer-ros ros-foxy-nav2-map-server 
-- ros-foxy-rqt-robot-steering ros-foxy-imu-tools 
-- ros-foxy-tf2-py ros-foxy-tf2-tools ros-foxy-nav2-bringup ros-foxy-navigation2
+- ros-galactic-cartographer-ros ros-galactic-nav2-map-server 
+- ros-galactic-rqt-robot-steering ros-galactic-imu-tools 
+- ros-galactic-tf2-py ros-galactic-tf2-tools ros-galactic-nav2-bringup ros-galactic-navigation2
 ```bash
-sudo apt install -y ros-foxy-cartographer-ros ros-foxy-nav2-map-server \
-ros-foxy-rqt-robot-steering ros-foxy-imu-tools \
-ros-foxy-tf2-py ros-foxy-tf2-tools ros-foxy-nav2-bringup ros-foxy-navigation2
+sudo apt install -y ros-galactic-cartographer-ros ros-galactic-nav2-map-server \
+ros-galactic-rqt-robot-steering ros-galactic-imu-tools \
+ros-galactic-tf2-py ros-galactic-tf2-tools ros-galactic-nav2-bringup ros-galactic-navigation2
 ```
 
 ### Build ROS2 source
