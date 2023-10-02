@@ -14,9 +14,9 @@
 #include <geometry_msgs/Twist.h>
 #include <PID_v1.h>
 
-#define MOTOR_1860 1
-#define MOTOR_620 2
-#define MOTOR_TYPE MOTOR_620
+#define MOTOR_60RPM 1
+#define MOTOR_178RPM 2
+#define MOTOR_TYPE MOTOR_60RPM
 
 #define PRINT_VEL 0
 #define PRINT_PIDERR 0
@@ -85,7 +85,7 @@ long currentMillis = 0;
 #define TICKS_PER_METER (TICKS_PER_REVOLUTION / (2.0 * 3.141592 * WHEEL_RADIUS))
 #define WHEEL_BASE (0.160)
 
-#if MOTOR_TYPE == MOTOR_1860
+#if MOTOR_TYPE == MOTOR_60RPM
 #define K_P 1125.0
 #define K_b 30
 #define PWM_MIN 43.0   // about 0.03 m/s
@@ -291,10 +291,6 @@ void set_pwm_values() {
   // These variables will hold our desired PWM values
   static int pwmLeftOut = 0;
   static int pwmRightOut = 0;
-
-  // If the required PWM is of opposite sign as the output PWM, we want to
-  // stop the car before switching direction
-  static bool stopped = false;
 
   // Set the direction of the motors
   if (pwmLeftReq > 0) {  // Left wheel forward

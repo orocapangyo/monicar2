@@ -55,8 +55,8 @@ class ODOMNode(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('initialPose', None),
-                ('TPR', None),
+                ('initialPose', 1),
+                ('TPR', 1860.0),
             ])
 
         print('Odom publisher created')

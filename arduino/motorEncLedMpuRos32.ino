@@ -27,9 +27,13 @@
 #include <PID_v1.h>
 #include <geometry_msgs/msg/quaternion.h>
 
-#define MOTOR_1860 1
-#define MOTOR_620 2
-#define MOTOR_TYPE MOTOR_1860
+#define GALACTIC 1
+#define FOXY 2
+#define ROSVER GALACTIC
+
+#define MOTOR_60RPM 1
+#define MOTOR_178RPM 2
+#define MOTOR_TYPE MOTOR_60RPM
 
 #define PRINT_VEL 0
 #define PRINT_PIDERR 0
@@ -153,7 +157,7 @@ long currentMillis = 0;
 #define TICKS_PER_METER (TICKS_PER_REVOLUTION / (2.0 * 3.141592 * WHEEL_RADIUS))
 #define WHEEL_BASE (0.160)
 
-#if MOTOR_TYPE == MOTOR_1860
+#if MOTOR_TYPE == MOTOR_60RPM
 #define K_P 1125.0
 #define K_b 30
 #define PWM_MIN 43.0   // about 0.03 m/s
@@ -645,6 +649,7 @@ void setup() {
 
   allocator = rcl_get_default_allocator();
 
+#if ROSVER == FOXY
   //create allocator
   RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
   DEBUG_PRINTLN("rclc_support_init done");
@@ -653,7 +658,17 @@ void setup() {
   node_ops.domain_id = 108;
   RCCHECK(rclc_node_init_with_options(&node, "uros_arduino_node", "", &support, &node_ops));
   DEBUG_PRINTLN("rclc_node_init done");
+#else
+  rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
+  RCCHECK(rcl_init_options_init(&init_options, allocator));
+  rcl_init_options_set_domain_id(&init_options, 108);
+  // create init_options
+  RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
+  DEBUG_PRINTLN("rclc_support_init done");
 
+  RCCHECK(rclc_node_init_default(&node, "uros_arduino_node", "", &support));
+  DEBUG_PRINTLN("rclc_node_init done");
+#endif
   // create publisher
   RCCHECK(rclc_publisher_init_default(
     &right_pub,
