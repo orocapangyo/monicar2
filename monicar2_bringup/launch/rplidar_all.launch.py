@@ -20,9 +20,9 @@ def generate_launch_description():
     scan_mode = LaunchConfiguration('scan_mode', default='Sensitivity')
 	
     rviz_config_dir = os.path.join(
-            get_package_share_directory('rplidar_ros'),
+            get_package_share_directory('monicar2_bringup'),
             'rviz',
-            'rplidar_ros.rviz')
+            'rplidar.rviz')
 
 
     return LaunchDescription([
