@@ -12,14 +12,21 @@ import math
 class ImuNode(Node):
     def __init__(self):
         super().__init__('imu_node')
-        self.declare_parameters(
+        self.declare_parameters( 
             namespace='',
-            parameters=[
-                ('max_fwd_m_s', None),
-            ])
-        # Declare parameters from YAML
-        self.get_logger().info("Setting Up the Node...")
+            parameters=[ 
+                ('timer_tick', 0.0),
+                ('imu_enable', 0),
+            ])        
 
+        self.get_logger().info("Setting Up the Node...")
+        self.timer_tick = self.get_parameter_or('timer_tick', Parameter('timer_tick', Parameter.Type.DOUBLE, 0.3)).get_parameter_value().double_value        
+        self.imu_enable = self.get_parameter_or('imu_enable', Parameter('imu_enable', Parameter.Type.INTEGER, 1)).get_parameter_value().integer_value        
+
+        print('timer_tick: %s sec, imu_enable: %s'%
+            (self.timer_tick,
+            self.imu_enable)
+        )
         # Set subscriber
         self.quatSub = self.create_subscription(Quaternion, 'quaternion', self.sub_callback, 10)       
         self.get_logger().info("quaternion subscriber set") 
@@ -30,9 +37,7 @@ class ImuNode(Node):
         self.imu_msg = Imu()
 
         #create timer
-        self.timer_tick = 0.03
         self.timer = self.create_timer(self.timer_tick, self.cb_timer)
-
         self.br = TransformBroadcaster(self)
 
         self.frame_id = self.declare_parameter('frame_id', 'imu_link').value
@@ -114,8 +119,10 @@ class ImuNode(Node):
         t.transform.translation.y = 0.0
         t.transform.translation.z = 0.06
         t.header.stamp = self.get_clock().now().to_msg()
-        #temporary disable
-        #t.transform.rotation =  self.imu_msg.orientation 
+
+        # imu data publish or null
+        if self.imu_enable == 1:
+            t.transform.rotation =  self.imu_msg.orientation 
         self.br.sendTransform(t)
 
 def main(args=None):

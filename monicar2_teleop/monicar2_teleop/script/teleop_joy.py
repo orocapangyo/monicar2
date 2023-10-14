@@ -64,9 +64,9 @@ class TeleopJoyNode(Node):
         self.declare_parameters(    # bring the param from yaml file
             namespace='',
             parameters=[ 
-                ('max_fwd_m_s', None),
-                ('max_rev_m_s', None),
-                ('max_deg_s', None),
+                ('max_fwd_m_s', 0.0),
+                ('max_rev_m_s', 0.0),
+                ('max_deg_s', 0.0),
             ])
 
         self.timer_inc = 0
@@ -79,8 +79,7 @@ class TeleopJoyNode(Node):
         print(' Monicar Teleop Joystick controller')
         print(msg)       
       
-        self.max_fwd_vel = self.get_parameter_or('max_fwd_m_s', Parameter('max_fwd_m_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value
-        
+        self.max_fwd_vel = self.get_parameter_or('max_fwd_m_s', Parameter('max_fwd_m_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value        
         self.max_rev_vel = self.get_parameter_or('max_rev_m_s', Parameter('max_rev_m_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value
         self.max_ang_vel = self.get_parameter_or('max_deg_s', Parameter('max_deg_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value
 
@@ -88,8 +87,8 @@ class TeleopJoyNode(Node):
             (self.max_fwd_vel,
             self.max_rev_vel,
             self.max_ang_vel)
-
         )
+        
         print('CTRL-C to quit')
 
         self.qos = QoSProfile(depth=10)

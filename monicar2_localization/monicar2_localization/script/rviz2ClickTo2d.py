@@ -46,7 +46,7 @@ class Rviz2Click2To2d(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('initialPose', None),
+                ('initialPose', 0),
             ])
 
         print('rvRviz2Click2To2d created')

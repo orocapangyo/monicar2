@@ -53,8 +53,9 @@ else:
 
 MAX_LIN_VEL = 0.2
 MAX_ANG_VEL = 0.8
-LIN_VEL_STEP_SIZE = 0.05
+LIN_VEL_STEP_SIZE = 0.03
 ANG_VEL_STEP_SIZE = 0.1
+
 MAXCOLOR = 5
 
 msg = """
@@ -71,11 +72,11 @@ a/d : increase/decrease angular velocity
 space key, s : force stop
 
 c : Change led
-once click : left
-double clicks : right
-three clicks : right & center
-four clicks : All ON
-five clicks : ALL OF
+1'st click : left
+2'nd clicks : right
+3'rd clicks : right & center
+4'th clicks : All ON
+5'th clicks : ALL OF
 
 
 CTRL-C to quit
@@ -98,13 +99,10 @@ def get_key(settings):
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)  
     return key
 
-
 def print_vels(target_linear_velocity, target_angular_velocity):  
     print('currently:\tlinear velocity {0}\t angular velocity {1} '.format(
         target_linear_velocity,
         target_angular_velocity))
-
-
 
 def make_simple_profile(output, input, slop): 
     if input > output: 
@@ -115,7 +113,6 @@ def make_simple_profile(output, input, slop):
         output = input
 
     return output
-
 
 def constrain(input_vel, low_bound, high_bound):  
     if input_vel < low_bound:
@@ -140,6 +137,11 @@ def main():
         settings = termios.tcgetattr(sys.stdin)
 
     rclpy.init()  
+
+    print('Param max lin: %s m/s, max ang: %s rad/s, lin step: %s m/s ang step: %s rad/s'%
+        (MAX_LIN_VEL, MAX_ANG_VEL,
+        LIN_VEL_STEP_SIZE, ANG_VEL_STEP_SIZE)
+    )
 
     qos = QoSProfile(depth=10) 
     node = rclpy.create_node('teleop_keyboard_node')    # generate node 
