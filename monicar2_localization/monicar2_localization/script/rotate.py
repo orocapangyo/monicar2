@@ -28,7 +28,7 @@ def main():
     print("Let's rotate your robot")
     speed = float(input("Input your speed (degrees/sec):"))
     angle = float(input("Type your distance (degrees):"))
-    clockwise = input("Clockwise:")           #True or false
+    clockwise = int(input("Clockwise, 0 or 1:"))            
 
     #Converting from angles to radians
     angular_speed = speed*2*PI/360
@@ -43,9 +43,9 @@ def main():
 
     # Checking if our movement is CW or CCW
     if clockwise:
-        vel_msg.angular.z = -abs(angular_speed)
-    else:
         vel_msg.angular.z = abs(angular_speed)
+    else:
+        vel_msg.angular.z = -abs(angular_speed)
 
     #Setting the current time for distance calculus
     t0 = node.get_clock().now().to_msg()

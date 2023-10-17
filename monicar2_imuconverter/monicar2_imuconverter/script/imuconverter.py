@@ -20,7 +20,7 @@ class ImuNode(Node):
             ])        
 
         self.get_logger().info("Setting Up the Node...")
-        self.timer_tick = self.get_parameter_or('timer_tick', Parameter('timer_tick', Parameter.Type.DOUBLE, 0.3)).get_parameter_value().double_value        
+        self.timer_tick = self.get_parameter_or('timer_tick', Parameter('timer_tick', Parameter.Type.DOUBLE, 0.05)).get_parameter_value().double_value        
         self.imu_enable = self.get_parameter_or('imu_enable', Parameter('imu_enable', Parameter.Type.INTEGER, 1)).get_parameter_value().integer_value        
 
         print('timer_tick: %s sec, imu_enable: %s'%

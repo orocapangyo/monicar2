@@ -1,4 +1,4 @@
 imu_node:
   ros__parameters:
-    timer_tick: 0.03
+    timer_tick: 0.05
     imu_enable: 1

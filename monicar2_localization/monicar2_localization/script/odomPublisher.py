@@ -55,16 +55,18 @@ class ODOMNode(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('initialPose', 1),
-                ('TPR', 1860.0),
+                ('initPoseRecieved', 0),
+                ('TPR', 0.0),
+                ('timer_tick', 0.0),
             ])
 
         print('Odom publisher created')
 
         # Get parameter values
-        self.initialPose = self.get_parameter_or('initialPose', Parameter('initialPose', Parameter.Type.INTEGER, 1)).get_parameter_value().integer_value
+        self.initPoseRecieved = self.get_parameter_or('initPoseRecieved', Parameter('initPoseRecieved', Parameter.Type.INTEGER, 1)).get_parameter_value().integer_value
+        self.timer_tick = self.get_parameter_or('timer_tick', Parameter('timer_tick', Parameter.Type.DOUBLE, 0.05)).get_parameter_value().double_value        
         self.TPR = self.get_parameter_or('TPR', Parameter('TPR', Parameter.Type.DOUBLE, 1860.0)).get_parameter_value().double_value
-        print('initialPose: %d, TRP: %s' %(self.initialPose, self.TPR) )
+        print('initPoseRecieved: %d, TRP: %s' %(self.initPoseRecieved, self.TPR) )
 
         #initialzie variable
         self.left_ticks = 0
@@ -86,7 +88,6 @@ class ODOMNode(Node):
         self.right_ticks_sub = self.create_subscription(Int32, 'right_ticks', self.rightTicksCallback, 10)
         self.init_sub = self.create_subscription(PoseStamped, 'initial_2d', self.init2dCallback, 10)
         
-        self.timer_tick = 0.03
         self.timer = self.create_timer(self.timer_tick , self.cb_timer)
 
          # Initialize the transform broadcaster
@@ -109,11 +110,11 @@ class ODOMNode(Node):
         self.x = msg.pose.position.x
         self.y = msg.pose.position.y
         self.z = msg.pose.orientation.z
-        self.initialPose = 1
-        print("initial_2d done")
+        self.initPoseRecieved = 1
+        print("init2dCallback:", self.initPoseRecieved)
 
     def cb_timer(self):
-        if self.initialPose == 0:
+        if self.initPoseRecieved == 0:
                 return 1
         
         # Dt calculate

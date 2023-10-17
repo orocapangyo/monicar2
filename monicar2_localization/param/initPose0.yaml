@@ -1,4 +1,5 @@
 odompub_node:
   ros__parameters:
-    initialPose: 0
+    initPoseRecieved: 0
     TPR: 1860.0
+    timer_tick : 0.05

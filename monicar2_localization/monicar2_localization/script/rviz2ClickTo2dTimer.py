@@ -54,21 +54,38 @@ class Rviz2Click2To2d(Node):
         self.goal_sub = self.create_subscription(PoseStamped, 'goal_pose', self.handle_goal, 10)
         self.init_sub = self.create_subscription(PoseWithCovarianceStamped, 'initialpose', self.handle_initial_pose, 10)
 
+        #200ms timer
+        self.timer = self.create_timer(0.2, self.cb_timer)
+
          # Initialize the transform broadcaster
         self.odom_broadcaster = TransformBroadcaster(self)
         # Mark current time
         self.last_time = self.get_clock().now()
         self.current_time = self.last_time
+
+        self.rpyGoal = PoseStamped()
+        self.rpyPose = PoseStamped()
+
+        self.goal_pose_click = 0
+        self.initialpose_click = 0
         print('Click2To2d done')
+
+    def cb_timer(self):
+        if self.goal_pose_click == 1:
+            self.goalPub.publish(self.rpyGoal)
+            self.goal_pose_click = 0
+        if self.initialpose_click == 1:
+            self.initPub.publish(self.rpyPose)
+            self.initialpose_click = 0
 
     def handle_goal(self, msg):
         print('goal clicked')
-        rpyGoal =  PoseStamped()
-        rpyGoal.header.frame_id = "map"
-        rpyGoal.header.stamp = msg.header.stamp
-        rpyGoal.pose.position.x = msg.pose.position.x
-        rpyGoal.pose.position.y = msg.pose.position.y
-        rpyGoal.pose.position.z = 0.0
+        self.goal_pose_click = 1
+        self.rpyGoal.header.frame_id = "map"
+        self.rpyGoal.header.stamp = msg.header.stamp
+        self.rpyGoal.pose.position.x = msg.pose.position.x
+        self.rpyGoal.pose.position.y = msg.pose.position.y
+        self.rpyGoal.pose.position.z = 0.0
 
         q = Quaternion()
         q.x = 0.0
@@ -78,20 +95,19 @@ class Rviz2Click2To2d(Node):
 
         roll, pitch, yaw = euler_from_quaternion(q)
 
-        rpyGoal.pose.orientation.x = 0.0
-        rpyGoal.pose.orientation.y = 0.0
-        rpyGoal.pose.orientation.z = yaw
-        rpyGoal.pose.orientation.w = 0.0
-        self.goalPub.publish(rpyGoal)
-
+        self.rpyGoal.pose.orientation.x = 0.0
+        self.rpyGoal.pose.orientation.y = 0.0
+        self.rpyGoal.pose.orientation.z = yaw
+        self.rpyGoal.pose.orientation.w = 0.0
+   
     def handle_initial_pose(self, msg):
-        print('initial pose clicked')
-        rpyPose = PoseStamped()
-        rpyPose.header.frame_id = "map"
-        rpyPose.header.stamp = msg.header.stamp
-        rpyPose.pose.position.x = msg.pose.pose.position.x
-        rpyPose.pose.position.y = msg.pose.pose.position.y
-        rpyPose.pose.position.z = 0.0
+        print('initialpose clicked')
+        self.initialpose_click = 1
+        self.rpyPose.header.frame_id = "map"
+        self.rpyPose.header.stamp = msg.header.stamp
+        self.rpyPose.pose.position.x = msg.pose.pose.position.x
+        self.rpyPose.pose.position.y = msg.pose.pose.position.y
+        self.rpyPose.pose.position.z = 0.0
 
         q = Quaternion()
         q.x = 0.0
@@ -101,12 +117,10 @@ class Rviz2Click2To2d(Node):
 
         roll, pitch, yaw = euler_from_quaternion(q)
 
-        rpyPose.pose.orientation.x = 0.0
-        rpyPose.pose.orientation.y = 0.0
-        rpyPose.pose.orientation.z = yaw
-        rpyPose.pose.orientation.w = 0.0
-        self.initPub.publish(rpyPose)
-
+        self.rpyPose.pose.orientation.x = 0.0
+        self.rpyPose.pose.orientation.y = 0.0
+        self.rpyPose.pose.orientation.z = yaw
+        self.rpyPose.pose.orientation.w = 0.0
 
 def main(args=None):
     rclpy.init(args=args)

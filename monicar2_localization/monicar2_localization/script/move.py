@@ -24,12 +24,12 @@ def main():
 
     #Receiveing the user's input
     print("Let's move your robot")
-    speed = float(input("Input your speed:"))
-    distance = float(input("Type your distance:"))
-    isForward = input("Foward:")  
-
+    speed = float(input("Input your speed, 0.0~0.2(m/s): "))
+    distance = float(input("Type your distance, 0~1(meter): "))
+    isForward = int(input("Foward, 0 or 1: "))
+    
     #Checking if the movement is forward or backwards
-    if(isForward):
+    if isForward == 1:
         vel_msg.linear.x = abs(speed)
     else:
         vel_msg.linear.x = -abs(speed)
