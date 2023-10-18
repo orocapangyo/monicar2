@@ -37,10 +37,4 @@ def generate_launch_description():
         emulate_tty=True,
     ),
 
-    Node(
-        package='monicar2_localization', executable='rviz2ClickTo2d', name='rviz2_click_node',
-        output='screen',
-        emulate_tty=True,
-    ),
-
   ])
