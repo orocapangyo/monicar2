@@ -30,6 +30,7 @@
 #define GALACTIC 1
 #define FOXY 2
 #define ROSVER GALACTIC
+#define DOMAINID 108
 
 #define MOTOR_60RPM 1
 #define MOTOR_178RPM 2
@@ -157,6 +158,8 @@ long currentMillis = 0;
 #define TICKS_PER_METER (TICKS_PER_REVOLUTION / (2.0 * 3.141592 * WHEEL_RADIUS))
 #define WHEEL_BASE (0.160)
 
+#define INTERVAL 50  //50ms, so 20Hz
+
 #if MOTOR_TYPE == MOTOR_60RPM
 #define K_P 1125.0
 #define K_b 30
@@ -164,7 +167,6 @@ long currentMillis = 0;
 #define PWM_MAX 245.0  // about 0.2 m/s
 #define TICKS_PER_REVOLUTION (1860.0)
 #define K_bias 0.0
-#define INTERVAL 30
 #else
 #define K_P 1227.0
 #define K_b 14
@@ -172,7 +174,6 @@ long currentMillis = 0;
 #define PWM_MAX 250.0  // about 0.2 m/s
 #define TICKS_PER_REVOLUTION (620.0)
 #define K_bias (-10.0)
-#define INTERVAL 30
 #endif
 
 #define PWM_TURN (PWM_MIN)
@@ -655,13 +656,13 @@ void setup() {
   DEBUG_PRINTLN("rclc_support_init done");
 
   rcl_node_options_t node_ops = rcl_node_get_default_options();
-  node_ops.domain_id = 108;
+  node_ops.domain_id = DOMAINID;
   RCCHECK(rclc_node_init_with_options(&node, "uros_arduino_node", "", &support, &node_ops));
   DEBUG_PRINTLN("rclc_node_init done");
 #else
   rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
   RCCHECK(rcl_init_options_init(&init_options, allocator));
-  rcl_init_options_set_domain_id(&init_options, 108);
+  rcl_init_options_set_domain_id(&init_options, DOMAINID);
   // create init_options
   RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
   DEBUG_PRINTLN("rclc_support_init done");
@@ -792,10 +793,12 @@ void mpu_setup() {
   devStatus = mpu.dmpInitialize();
 
   // supply your own gyro offsets here, scaled for min sensitivity
-  mpu.setXGyroOffset(220);
-  mpu.setYGyroOffset(76);
-  mpu.setZGyroOffset(-85);
-  mpu.setZAccelOffset(1788);  // 1688 factory default for my test chip
+  mpu.setXGyroOffset(123);
+  mpu.setYGyroOffset(6);
+  mpu.setZGyroOffset(0);
+  mpu.setXAccelOffset(-4593); 
+  mpu.setYAccelOffset(-291); 
+  mpu.setZAccelOffset(1467);  // 1688 factory default for my test chip
 
   // make sure it worked (returns 0 if so)
   if (devStatus == 0) {

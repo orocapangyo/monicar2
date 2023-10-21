@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<robot name="robot" xmlns:xacro="http://ros.org/wiki/xacro">
+
+    <material name="blue">
+	    <color rgba="0.13 0.59 0.95 1"/>
+    </material>
+
+    <material name="white">
+	    <color rgba="0.96 0.96 0.96 1"/>
+    </material>
+
+    <material name="black">
+	    <color rgba="0.13 0.13 0.13 1"/>
+    </material>
+
+    <material name="green">
+        <color rgba="0.30 0.69 0.31 1.0"/>
+    </material>
+
+    <material name="orange">
+      <color rgba="1.00 0.88 0.70 1.0"/>
+    </material>
+
+    <material name="dark_orange">
+      <color rgba="0.90 0.32 0.00 1.0"/>
+    </material>
+
+    <link name="base_footprint">
+        <collision>
+          <origin rpy="0 0 0" xyz="0 0 0.0005"/>
+          <geometry>
+            <box size="0.22 0.22 0.001"/>
+          </geometry>
+        </collision>
+    </link>
+
+    <joint name="base_link_joint" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <parent link="base_footprint" />
+        <child link="base_link" />
+    </joint>
+
+    <link name="base_link">
+    <visual>
+      <origin rpy="1.57 0 3.14" xyz="0.13 -0.13 -0.17 "/>
+      <geometry>
+        <mesh filename="package://monicar2_description/meshes/total.stl" scale="0.001 0.001 0.001"/> 
+      </geometry>
+      <material name="orange"/>
+    </visual>
+    <collision>
+      <origin rpy="1.57 0 3.14" xyz="0.13 -0.13 -0.17" />
+      <geometry>
+        <mesh filename="package://monicar2_description/meshes/total.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+    </link>   
+ 
+</robot>

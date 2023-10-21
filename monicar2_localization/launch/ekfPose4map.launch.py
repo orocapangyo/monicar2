@@ -27,6 +27,11 @@ def generate_launch_description():
         FindPackageShare("monicar2_bringup"), '/launch', '/bringup.launch.py'])
     ),
 
+    IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            FindPackageShare("monicar2_description"), '/launch', '/description.launch.py'])
+    ),
+    
     Node(
         package='monicar2_localization', executable='odomPublisher', name='odompub_node',
         output='screen',

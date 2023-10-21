@@ -125,7 +125,8 @@ class TeleopJoyNode(Node):
         self.twist.linear.z = 0.0
         self.twist.angular.x = 0.0
         self.twist.angular.y = 0.0
-        self.twist.angular.z = joymsg.axes[0] * self.max_ang_vel
+        # change axes for turn
+        self.twist.angular.z = joymsg.axes[2] * self.max_ang_vel
         print('V= %.2f m/s, W= %.2f deg/s'%(self.twist.linear.x, self.twist.angular.z))
 
     def cb_timer(self):

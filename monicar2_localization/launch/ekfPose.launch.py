@@ -39,5 +39,9 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True,
     ),
-    
+
+    IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            FindPackageShare("monicar2_description"), '/launch', '/description.launch.py'])
+    ),
   ])

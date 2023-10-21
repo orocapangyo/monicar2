@@ -6,7 +6,10 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1/Frames1
+        - /Odometry1
+        - /Odometry1/Shape1
         - /Cartographer1
+        - /RobotModel1
       Splitter Ratio: 0.5794117450714111
     Tree Height: 756
   - Class: rviz_common/Selection
@@ -133,14 +136,14 @@ Visualization Manager:
       Position Tolerance: 0.10000000149011612
       Shape:
         Alpha: 1
-        Axes Length: 1
+        Axes Length: 0.20000000298023224
         Axes Radius: 0.10000000149011612
         Color: 255; 25; 0
         Head Length: 0.30000001192092896
         Head Radius: 0.10000000149011612
         Shaft Length: 1
         Shaft Radius: 0.05000000074505806
-        Value: Arrow
+        Value: Axes
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -244,6 +247,39 @@ Visualization Manager:
           Value: false
       Enabled: true
       Name: Cartographer
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /robot_description
+      Enabled: true
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        base_footprint:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Name: RobotModel
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -322,5 +358,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1425
-  X: 640
-  Y: 211
+  X: 402
+  Y: 129
