@@ -66,7 +66,7 @@ class TeleopJoyNode(Node):
             parameters=[ 
                 ('max_fwd_m_s', 0.0),
                 ('max_rev_m_s', 0.0),
-                ('max_deg_s', 0.0),
+                ('max_rad_s', 0.0),
             ])
 
         self.timer_inc = 0
@@ -81,7 +81,7 @@ class TeleopJoyNode(Node):
       
         self.max_fwd_vel = self.get_parameter_or('max_fwd_m_s', Parameter('max_fwd_m_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value        
         self.max_rev_vel = self.get_parameter_or('max_rev_m_s', Parameter('max_rev_m_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value
-        self.max_ang_vel = self.get_parameter_or('max_deg_s', Parameter('max_deg_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value
+        self.max_ang_vel = self.get_parameter_or('max_rad_s', Parameter('max_rad_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value
 
         print('Param max fwd: %s m/s, max rev: -%s m/s, max ang: %s dev/s'%
             (self.max_fwd_vel,
@@ -127,7 +127,7 @@ class TeleopJoyNode(Node):
         self.twist.angular.y = 0.0
         # change axes for turn
         self.twist.angular.z = joymsg.axes[2] * self.max_ang_vel
-        print('V= %.2f m/s, W= %.2f deg/s'%(self.twist.linear.x, self.twist.angular.z))
+        # print('V= %.2f m/s, W= %.2f deg/s'%(self.twist.linear.x, self.twist.angular.z))
 
     def cb_timer(self):
         self.timer_inc+=1

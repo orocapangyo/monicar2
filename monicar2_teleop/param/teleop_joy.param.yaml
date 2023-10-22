@@ -2,4 +2,4 @@ teleop_joy_node:
   ros__parameters:
     max_fwd_m_s: 0.18
     max_rev_m_s: 0.18
-    max_deg_s: 1.6
+    max_rad_s: 0.785
