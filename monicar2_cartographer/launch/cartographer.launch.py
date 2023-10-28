@@ -50,30 +50,31 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'use_sim_time',
             default_value='false',
-            description='Use simulation (Gazebo) clock if true'),
+            description='Use simulation (Gazebo) clock if true'),           
+        DeclareLaunchArgument(
+            'resolution',
+            default_value=resolution,
+            description='Resolution of a grid cell in the published occupancy grid'),
+        DeclareLaunchArgument(
+            'publish_period_sec',
+            default_value=publish_period_sec,
+            description='OccupancyGrid publishing period'),
+
+       IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([ThisLaunchFileDir(), '/occupancy_grid.launch.py']),
+            launch_arguments={'use_sim_time': use_sim_time, 'resolution': resolution,
+                              'publish_period_sec': publish_period_sec}.items(),
+        ),
 
         Node(
             package='cartographer_ros',
             executable='cartographer_node',
             name='cartographer_node',
             output='screen',
+            remappings=[('/odometry/filtered', '/odom')],
             parameters=[{'use_sim_time': use_sim_time}],
             arguments=['-configuration_directory', cartographer_config_dir,
-                       '-configuration_basename', configuration_basename]),
-
-        DeclareLaunchArgument(
-            'resolution',
-            default_value=resolution,
-            description='Resolution of a grid cell in the published occupancy grid'),
-
-        DeclareLaunchArgument(
-            'publish_period_sec',
-            default_value=publish_period_sec,
-            description='OccupancyGrid publishing period'),
-
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource([ThisLaunchFileDir(), '/occupancy_grid.launch.py']),
-            launch_arguments={'use_sim_time': use_sim_time, 'resolution': resolution,
-                              'publish_period_sec': publish_period_sec}.items(),
+                       '-configuration_basename', configuration_basename]
         ),
+ 
     ])

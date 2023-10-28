@@ -24,7 +24,7 @@ from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
-    resolution = LaunchConfiguration('resolution', default='0.05')
+    resolution = LaunchConfiguration('resolution', default='0.01')
     publish_period_sec = LaunchConfiguration('publish_period_sec', default='1.0')
 
     return LaunchDescription([
@@ -49,5 +49,6 @@ def generate_launch_description():
             name='occupancy_grid_node',
             output='screen',
             parameters=[{'use_sim_time': use_sim_time}],
-            arguments=['-resolution', resolution, '-publish_period_sec', publish_period_sec]),
+            arguments=['-resolution', resolution, '-publish_period_sec', publish_period_sec]
+        ),
     ])
