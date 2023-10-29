@@ -123,7 +123,7 @@ class ImuNode(Node):
         # imu data publish or null
         if self.imu_enable == 1:
             t.transform.rotation =  self.imu_msg.orientation 
-        self.br.sendTransform(t)
+            self.br.sendTransform(t)
 
 def main(args=None):
     rclpy.init(args=args)
