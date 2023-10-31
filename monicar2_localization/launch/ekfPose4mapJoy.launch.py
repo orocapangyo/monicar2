@@ -20,6 +20,14 @@ def generate_launch_description():
     )
   ),
 
+  ekf_parameter = LaunchConfiguration(
+    'ekf_parameter',
+    default=os.path.join(
+      get_package_share_directory('monicar2_localization'),
+      'param/ekf.yaml'
+    )
+  ),
+
   return LaunchDescription([
     IncludeLaunchDescription(
       PythonLaunchDescriptionSource([
@@ -30,6 +38,15 @@ def generate_launch_description():
             FindPackageShare("monicar2_teleop"), '/launch', '/teleop_joy.launch.py'])
     ),
 
+    # Start robot localization using an Extended Kalman filter
+    Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[ekf_parameter],
+        emulate_tty=True,
+    ),    
     Node(
         package='monicar2_localization', executable='odomPublisher', name='odompub_node',
         output='screen',
