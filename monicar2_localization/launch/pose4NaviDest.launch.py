@@ -16,42 +16,34 @@ def generate_launch_description():
     'odom_parameter',
     default=os.path.join(
       get_package_share_directory('monicar2_localization'),
-      'param/initPose1.yaml'
+      'param/initPose0.yaml'
     )
-  ),
-
-  ekf_parameter = LaunchConfiguration(
-    'ekf_parameter',
-    default=os.path.join(
-      get_package_share_directory('monicar2_localization'),
-      'param/ekf.yaml'
-    )
-  ),
-
+  )
+  
   return LaunchDescription([
+
     IncludeLaunchDescription(
       PythonLaunchDescriptionSource([
         FindPackageShare("monicar2_bringup"), '/launch', '/bringup.launch.py'])
     ),
+
     IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
-            FindPackageShare("monicar2_teleop"), '/launch', '/teleop_joy.launch.py'])
+            FindPackageShare("monicar2_description"), '/launch', '/description.launch.py'])
     ),
-
-    # Start robot localization using an Extended Kalman filter
-    Node(
-        package='robot_localization',
-        executable='ekf_node',
-        name='ekf_filter_node',
-        output='screen',
-        parameters=[ekf_parameter],
-        emulate_tty=True,
-    ),    
+    
     Node(
         package='monicar2_localization', executable='odomPublisher', name='odompub_node',
         output='screen',
         parameters=[odom_parameter],
         emulate_tty=True,
     ),
+
+    Node(
+        package='monicar2_localization', executable='rviz2ClickTo2d', name='rviz2_click_node',
+        output='screen',
+        emulate_tty=True,
+    ),
+
 
   ])

@@ -24,8 +24,6 @@ from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
@@ -68,11 +66,5 @@ def generate_launch_description():
                 'map': map_dir,
                 'use_sim_time': use_sim_time,
                 'params_file': param_dir}.items(),
-        ),
-
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource([
-                FindPackageShare("monicar2_description"), '/launch', '/description.launch.py'])
-        ),
-
+        )
     ])

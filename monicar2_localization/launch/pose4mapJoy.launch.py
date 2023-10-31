@@ -20,29 +20,15 @@ def generate_launch_description():
     )
   ),
 
-  ekf_parameter = LaunchConfiguration(
-    'ekf_parameter',
-    default=os.path.join(
-      get_package_share_directory('monicar2_localization'),
-      'param/ekf.yaml'
-    )
-  ),
-
   return LaunchDescription([
-
     IncludeLaunchDescription(
       PythonLaunchDescriptionSource([
         FindPackageShare("monicar2_bringup"), '/launch', '/bringup.launch.py'])
     ),
     
-    # Start robot localization using an Extended Kalman filter
-    Node(
-        package='robot_localization',
-        executable='ekf_node',
-        name='ekf_filter_node',
-        output='screen',
-        parameters=[ekf_parameter],
-        emulate_tty=True,
+    IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            FindPackageShare("monicar2_teleop"), '/launch', '/teleop_joy.launch.py'])
     ),
 
     Node(

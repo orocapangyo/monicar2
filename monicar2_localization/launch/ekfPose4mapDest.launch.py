@@ -26,13 +26,18 @@ def generate_launch_description():
       get_package_share_directory('monicar2_localization'),
       'param/ekf.yaml'
     )
-  ),
+  )
 
   return LaunchDescription([
 
     IncludeLaunchDescription(
       PythonLaunchDescriptionSource([
         FindPackageShare("monicar2_bringup"), '/launch', '/bringup.launch.py'])
+    ),
+
+    IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            FindPackageShare("monicar2_description"), '/launch', '/description.launch.py'])
     ),
     
     # Start robot localization using an Extended Kalman filter
