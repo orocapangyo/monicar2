@@ -1,4 +1,4 @@
-# Monicar2 ROS navigation Robot
+# Monicar II ROS navigation Robot
 This project is about ROS Package for navigation with DIY robot  
 Robot 3D model, BOM: Byungki  
 Circuit: Byungki, ZETA7    
@@ -6,6 +6,29 @@ PCB layout: Byungki
 Aruduino/ESP32 scketch: ZETA7  
 ROS code: ZETA7, Alpha, Byungki
 
+## Tested System information
+
+**Jetson Nano 4GB/2GB + RPLidar + ESP32**
+* Ubuntu 20.04
+* ROS2 Galactic
+
+## Packages with Brief Explanation
+
+```
+├── monicar2_bringup      => robot bringup, start uROS, RPLidar, IMU...
+├── monicar2_cartographer => SLAM via cartographer
+├── monicar2_description  => Show robot 
+├── monicar2_imuconverter => Make /imu/data topic, issues static TF
+├── monicar2_localization => issue odometry, make ekfPose
+├── monicar2_navigation2  => ros2 navigation2
+├── monicar2_telep        => teleop via keyboard, joystick(=gamepad)
+├── arduino               => 
+(...)
+├── 
+├── Images
+├── LICENSE
+├── README.md
+```
 # Especially Thanks
 Automatic Addision: https://automaticaddison.com/how-to-set-up-the-ros-navigation-stack-on-a-robot/  
 OMO R1 Mini: https://github.com/omorobot/omo_r1mini-foxy    
@@ -30,8 +53,8 @@ create_udev_rules_rplidar.sh, delete_udev_rules_rplidar.sh, rplidar.rules: udev 
 
 ## 3D view
 <div align="center">
-  <img src="images/monicar2_3d.png">   
-  <img src="images/monicar2_3d1.png">   
+  <img src="images/monicar2_3d.png" width="100" align="left" >   
+  <img src="images/monicar2_3d1.png" width="100" align="right" >   
 </div>
 
 ## Diagram
