@@ -47,13 +47,11 @@ create_udev_rules_rplidar.sh, delete_udev_rules_rplidar.sh, rplidar.rules: udev 
 ```
 
 ## Overview   
-<table>
-  <tr>
-    <td valign="top"><img src="images/monicar2_3d.png" width=480 height=480 > </td>
-    <td valign="top"><img src="images/monicar2_3car.png" width=480 height=270> </td>
-    <td valign="top"><img src="images/monicar2_3d1.png" width=480 height=480></td>
-  </tr>
- </table>
+ <div align="center">
+  <img src="images/monicar2_3car.png">   
+  <img src="images/monicar2_3d.png">  
+   <img src="images/monicar2_3d1.png">   
+</div>
 
 ## Diagram   
 <div align="center">
