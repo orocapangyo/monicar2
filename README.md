@@ -49,9 +49,9 @@ create_udev_rules_rplidar.sh, delete_udev_rules_rplidar.sh, rplidar.rules: udev 
 ## Overview   
 <table>
   <tr>
-    <td valign="top"><img src="images/monicar2_3d.png" width=270 height=480></td>
-    <td valign="top"><img src="images/monicar2_3car.png" width=270 height=480></td>
-    <td valign="top"><img src="images/monicar2_3d1.png" width=270 height=480></td>
+    <td valign="top"><img src="images/monicar2_3d.png" width="35%"> </td>
+    <td valign="top"><img src="images/monicar2_3car.png" width="35%"> </td>
+    <td valign="top"><img src="images/monicar2_3d1.png" width="35%"></td>
   </tr>
  </table>
 
