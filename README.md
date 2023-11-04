@@ -46,18 +46,14 @@ create_udev_rules_esp32snode.sh, delete_udev_rules_esp32snode.sh, esp32sNodemcu.
 create_udev_rules_rplidar.sh, delete_udev_rules_rplidar.sh, rplidar.rules: udev rule for RPLidar   
 ```
 
-## Overview
-<div align="center">
-  <img src="images/monicar2_3car.png">   
-</div>
+## Overview   
+<p align="center">
+      <img src="images/monicar2_3d.png"" align="left">
+      <img src="images/monicar2_3car.png">
+      <img src="images/monicar2_3d1.png" align="right">
+</p>
 
-## 3D view
-<div align="center">
-  <img src="images/monicar2_3d.png" width="100" align="left" >   
-  <img src="images/monicar2_3d1.png" width="100" align="right" >   
-</div>
-
-## Diagram
+## Diagram   
 <div align="center">
   <img src="images/monicar2.png">   
 </div>
