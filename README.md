@@ -22,7 +22,7 @@ ROS code: ZETA7, Alpha, Byungki
 ├── monicar2_localization => issue odometry, make ekfPose
 ├── monicar2_navigation2  => ros2 navigation2
 ├── monicar2_telep        => teleop via keyboard, joystick(=gamepad)
-├── arduino               => 
+├── arduino               => uROS on ESP32, udev rules, motor tester
 (...)
 ├── 
 ├── Images
@@ -47,11 +47,13 @@ create_udev_rules_rplidar.sh, delete_udev_rules_rplidar.sh, rplidar.rules: udev 
 ```
 
 ## Overview   
-<p align="center">
-      <img src="images/monicar2_3d.png"" align="left">
-      <img src="images/monicar2_3car.png">
-      <img src="images/monicar2_3d1.png" align="right">
-</p>
+<table>
+  <tr>
+    <td valign="top"><img src="images/monicar2_3d.png" width=270 height=480></td>
+    <td valign="top"><img src="images/monicar2_3car.png" width=270 height=480></td>
+    <td valign="top"><img src="images/monicar2_3d1.png" width=270 height=480></td>
+  </tr>
+ </table>
 
 ## Diagram   
 <div align="center">
