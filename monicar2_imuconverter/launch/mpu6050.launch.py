@@ -9,11 +9,12 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 def generate_launch_description():
+  useImu = LaunchConfiguration('useImu', default='true')
   imu_parameter = LaunchConfiguration(
     'imu_parameter',
     default=os.path.join(
-      get_package_share_directory('monicar2_imuconverter'),
-      'param/imu.yaml'
+      get_package_share_directory('monicar2_localization'),
+      'param/robot.yaml'
     )
   )
   
@@ -21,7 +22,8 @@ def generate_launch_description():
     Node(
         package='monicar2_imuconverter', executable='imuconverter', name='imu_node',
         output='screen',
-        parameters=[imu_parameter],
+        parameters=[imu_parameter,
+                  {'useImu': useImu}],
         emulate_tty=True,        
     ),
   ])

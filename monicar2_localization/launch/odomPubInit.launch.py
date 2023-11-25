@@ -13,11 +13,12 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
+  initPose = LaunchConfiguration('initPose', default='true')
   odom_parameter = LaunchConfiguration(
     'odom_parameter',
     default=os.path.join(
       get_package_share_directory('monicar2_localization'),
-      'param/initPose0.yaml'
+      'param/robot.yaml'
     )
   ),
 
@@ -30,7 +31,8 @@ def generate_launch_description():
     Node(
         package='monicar2_localization', executable='odomPublisher', name='odompub_node',
         output='screen',
-        parameters=[odom_parameter],
+        parameters=[odom_parameter,  
+                  {'initPoseRecieved': initPose}],
         emulate_tty=True,
     ),
   ])

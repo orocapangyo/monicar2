@@ -55,7 +55,7 @@ class ODOMNode(Node):
         self.declare_parameters(
             namespace='',
             parameters=[
-                ('initPoseRecieved', 0),
+                ('initPoseRecieved', True),
                 ('TPR', 0.0),
                 ('timer_tick', 0.0),
             ])
@@ -63,10 +63,10 @@ class ODOMNode(Node):
         print('Odom publisher created')
 
         # Get parameter values
-        self.initPoseRecieved = self.get_parameter_or('initPoseRecieved', Parameter('initPoseRecieved', Parameter.Type.INTEGER, 1)).get_parameter_value().integer_value
+        self.initPoseRecieved = self.get_parameter_or('initPoseRecieved', Parameter('initPoseRecieved', Parameter.Type.BOOL, True)).get_parameter_value().bool_value
         self.timer_tick = self.get_parameter_or('timer_tick', Parameter('timer_tick', Parameter.Type.DOUBLE, 0.05)).get_parameter_value().double_value        
         self.TPR = self.get_parameter_or('TPR', Parameter('TPR', Parameter.Type.DOUBLE, 1860.0)).get_parameter_value().double_value
-        print('initPoseRecieved: %d, TRP: %s' %(self.initPoseRecieved, self.TPR) )
+        print('initPoseRecieved: %s, TPR: %s' %(self.initPoseRecieved, self.TPR) )
 
         #initialzie variable
         self.left_ticks = 0
@@ -110,11 +110,11 @@ class ODOMNode(Node):
         self.x = msg.pose.position.x
         self.y = msg.pose.position.y
         self.z = msg.pose.orientation.z
-        self.initPoseRecieved = 1
+        self.initPoseRecieved = True
         print("init2dCallback:", self.initPoseRecieved)
 
     def cb_timer(self):
-        if self.initPoseRecieved == 0:
+        if self.initPoseRecieved == False:
                 return 1
         
         # Dt calculate

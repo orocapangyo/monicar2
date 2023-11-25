@@ -8,7 +8,6 @@ from launch.actions import LogInfo
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-
 def generate_launch_description():
     channel_type =  LaunchConfiguration('channel_type', default='serial')
     serial_port = LaunchConfiguration('serial_port', default='/dev/rplidar')
@@ -23,9 +22,7 @@ def generate_launch_description():
             'rviz',
             'rplidar.rviz')
 
-
     return LaunchDescription([
-
         DeclareLaunchArgument(
             'channel_type',
             default_value=channel_type,
@@ -70,7 +67,7 @@ def generate_launch_description():
                          'frame_id': frame_id,
                          'inverted': inverted,
                          'angle_compensate': angle_compensate,
-                           'scan_mode': scan_mode
+                         'scan_mode': scan_mode
                          }],
             output='screen'),
 

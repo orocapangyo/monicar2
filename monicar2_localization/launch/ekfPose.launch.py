@@ -34,16 +34,12 @@ def generate_launch_description():
     default_value=use_joy, 
     description='Whether to start joystick')
 
-  run_odompub0 = IncludeLaunchDescription(
+  run_odompub = IncludeLaunchDescription(
     PythonLaunchDescriptionSource(
-      join(get_package_share_directory('monicar2_localization'), 'launch', 'odomPubInit1.launch.py')),
-    condition=IfCondition(initPose)
-  )
-
-  run_odompub1 = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-      join(get_package_share_directory('monicar2_localization'), 'launch', 'odomPubInit0.launch.py')),
-    condition=UnlessCondition(initPose)
+      join(get_package_share_directory('monicar2_localization'), 'launch', 'odomPubInit.launch.py')),
+    launch_arguments={
+      'initPose': initPose
+      }.items()
   )
 
   run_rvizClick2d= IncludeLaunchDescription(
@@ -71,8 +67,7 @@ def generate_launch_description():
   ld.add_action(declare_use_joy)
 
   # Add any actions
-  ld.add_action(run_odompub0)
-  ld.add_action(run_odompub1)
+  ld.add_action(run_odompub)
   ld.add_action(run_rvizClick2d) 
   ld.add_action(run_description)
   ld.add_action(run_joystick)

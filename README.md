@@ -49,8 +49,7 @@ create_udev_rules_rplidar.sh, delete_udev_rules_rplidar.sh, rplidar.rules: udev 
 ## Overview   
  <div align="center">
   <img src="images/monicar2_3car.png">   
-  <img src="images/monicar2_3d.png">  
-   <img src="images/monicar2_3d1.png">   
+  <img src="images/monicar2_3d.png">   
 </div>
 
 ## Diagram   
