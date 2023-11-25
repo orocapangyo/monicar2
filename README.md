@@ -139,10 +139,11 @@ $ ros2 run monicar2_teleop teleop_keyboard
 - Cartographer
 ```bash
 cd {$workspace_path}
-#terminal #1, Jetson
 $ ros2 launch monicar2_localization ekfPose.launch.py 
-# or using Joystick, EKF, robot description
-$ ros2 launch monicar2_localization ekfPose.launch.py use_joy:='true' use_ekf:='true' use_des:='true'
+# or using another options
+# example) teleop_joy, not using description
+$ ros2 launch monicar2_localization ekfPose.launch.py use_joy:='true' use_des:='false'
+
 #terminal #2, recommand PC than Jetson
 $ ros2 launch monicar2_cartographer cartographer.launch.py
 #terminal #3, recommand PC than Jetson
@@ -150,12 +151,14 @@ $ ros2 launch monicar2_cartographer cartographer_rviz.launch.py
 ```
 - Slam_toolbox
 ```bash
-cd {$workspace_path}
 #terminal #1, Jetson
+cd {$workspace_path}
 $ ros2 launch monicar2_localization ekfPose.launch.py 
-# or using Joystick, EKF, robot description
-$ ros2 launch monicar2_localization ekfPose.launch.py use_joy:='true' use_ekf:='true' use_des:='true'
-#terminal #2, recommand PC than Jetson
+# or using another options
+# example) teleop_joy, not using description
+$ ros2 launch monicar2_localization ekfPose.launch.py use_joy:='true' use_des:='false'
+
+#terminal #2,recommand PC than Jetson
 $ ros2 launch nav2_bringup navigation_launch.py
 #terminal #3,recommand PC than Jetson
 $ ros2 launch slam_toolbox online_async_launch.py
@@ -172,10 +175,13 @@ ros2 run nav2_map_server map_saver_cli -f map
 
 - To conduct path planning & following, close all previsous launch.py
 ```bash
+#terminal #1, Jetson
 cd {$workspace_path}
-$$ ros2 launch monicar2_localization ekfPose.launch.py initPose:='false'
-# or using EKF, robot description
-$ ros2 launch monicar2_localization ekfPose.launch.py initPose='false' use_ekf:='true' use_des:='true'
+$ ros2 launch monicar2_localization ekfPose.launch.py initPose:='false'
+# or using another options
+# example) not using description
+$ ros2 launch monicar2_localization ekfPose.launch.py initPose='false' use_des:='false'
+
 #terminal #2,recommand PC than Jetson
 $ ros2 launch monicar2_navigation2 navigation2.launch.py map:=./mymap.yaml
 #terminal #3, recommand PC than Jetson

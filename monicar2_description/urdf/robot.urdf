@@ -42,18 +42,12 @@
 
     <link name="base_link">
     <visual>
-      <origin rpy="1.57 0 3.14" xyz="0.13 -0.13 -0.17 "/>
+      <origin rpy="1.57 0 1.57" xyz="-0.20 -0.10 -0.01"/>
       <geometry>
         <mesh filename="package://monicar2_description/meshes/total.stl" scale="0.001 0.001 0.001"/> 
       </geometry>
       <material name="orange"/>
     </visual>
-    <collision>
-      <origin rpy="1.57 0 3.14" xyz="0.13 -0.13 -0.17" />
-      <geometry>
-        <mesh filename="package://monicar2_description/meshes/total.stl" scale="0.001 0.001 0.001" />
-      </geometry>
-    </collision>
     </link>   
  
 </robot>

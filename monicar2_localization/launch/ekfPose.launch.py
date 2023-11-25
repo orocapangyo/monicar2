@@ -16,19 +16,13 @@ from launch.substitutions import LaunchConfiguration
 
 def generate_launch_description():
   initPose = LaunchConfiguration('initPose', default='true')
-  use_ekf = LaunchConfiguration('use_ekf', default='false')
-  use_des = LaunchConfiguration('use_des', default='false')
+  use_des = LaunchConfiguration('use_des', default='true')
   use_joy = LaunchConfiguration('use_joy', default='false')
 
   declare_initPose = DeclareLaunchArgument(
     name='initPose', 
     default_value=initPose, 
     description='Whether initPose is clicked already')
-    
-  declare_use_ekf = DeclareLaunchArgument(
-    name='use_ekf', 
-    default_value=use_ekf, 
-    description='Whether to start ekfnode')
 
   declare_use_desc= DeclareLaunchArgument(
     name='use_des', 
@@ -58,12 +52,6 @@ def generate_launch_description():
     condition=UnlessCondition(initPose)
   )
 
-  run_ekf = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(
-      join(get_package_share_directory('monicar2_localization'), 'launch', 'ekfnode.launch.py')),
-    condition=IfCondition(use_ekf)
-  )  
-
   run_description = IncludeLaunchDescription(
     PythonLaunchDescriptionSource(
       join(get_package_share_directory('monicar2_description'), 'launch', 'state_publisher.launch.py')),
@@ -79,7 +67,6 @@ def generate_launch_description():
   # Create the launch description and populate
   ld = LaunchDescription()
   ld.add_action(declare_initPose)
-  ld.add_action(declare_use_ekf)
   ld.add_action(declare_use_desc)
   ld.add_action(declare_use_joy)
 
@@ -87,7 +74,6 @@ def generate_launch_description():
   ld.add_action(run_odompub0)
   ld.add_action(run_odompub1)
   ld.add_action(run_rvizClick2d) 
-  ld.add_action(run_ekf)
   ld.add_action(run_description)
   ld.add_action(run_joystick)
 

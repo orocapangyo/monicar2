@@ -27,7 +27,6 @@ from launch.substitutions import LaunchConfiguration
 from launch.conditions import IfCondition
 
 def generate_launch_description():
-    use_des = LaunchConfiguration('use_des', default='true')
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     map_dir = LaunchConfiguration(
         'map',
@@ -62,22 +61,11 @@ def generate_launch_description():
             default_value='false',
             description='Use simulation (Gazebo) clock if true'),
 
-        DeclareLaunchArgument(
-            name='use_des', 
-            default_value=use_des, 
-            description='Whether to start robot description'),
-
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource([nav2_launch_file_dir, '/bringup_launch.py']),
             launch_arguments={
                 'map': map_dir,
                 'use_sim_time': use_sim_time,
                 'params_file': param_dir}.items(),
-        ),
-
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                join(get_package_share_directory('monicar2_description'), 'launch', 'state_publisher.launch.py')),
-            condition=IfCondition(use_des)
         ),
     ])
