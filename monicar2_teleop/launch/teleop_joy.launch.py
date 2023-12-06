@@ -34,8 +34,7 @@ def generate_launch_description():
       }]
     ),
     Node(
-      package='monicar2_teleop', executable='teleop_joy',
-      name='teleop_joy_node',
+      package='monicar2_teleop', executable='teleop_joy', name='teleop_joy_node',
       output='screen',
       emulate_tty=True,
       parameters=[teleop_joy_parameter],

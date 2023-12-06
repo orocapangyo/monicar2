@@ -1,4 +1,4 @@
-# Monicar2 ROS navigation Robot
+# Monicar II ROS navigation Robot
 This project is about ROS Package for navigation with DIY robot  
 Robot 3D model, BOM: Byungki  
 Circuit: Byungki, ZETA7    
@@ -6,6 +6,29 @@ PCB layout: Byungki
 Aruduino/ESP32 scketch: ZETA7  
 ROS code: ZETA7, Alpha, Byungki
 
+## Tested System information
+
+**Jetson Nano 4GB/2GB + RPLidar + ESP32**
+* Ubuntu 20.04
+* ROS2 Galactic
+
+## Packages with Brief Explanation
+
+```
+├── monicar2_bringup      => robot bringup, start uROS, RPLidar, IMU...
+├── monicar2_cartographer => SLAM via cartographer
+├── monicar2_description  => Show robot 
+├── monicar2_imuconverter => Make /imu/data topic, issues static TF
+├── monicar2_localization => issue odometry, make ekfPose
+├── monicar2_navigation2  => ros2 navigation2
+├── monicar2_telep        => teleop via keyboard, joystick(=gamepad)
+├── arduino               => uROS on ESP32, udev rules, motor tester
+(...)
+├── 
+├── Images
+├── LICENSE
+├── README.md
+```
 # Especially Thanks
 Automatic Addision: https://automaticaddison.com/how-to-set-up-the-ros-navigation-stack-on-a-robot/  
 OMO R1 Mini: https://github.com/omorobot/omo_r1mini-foxy    
@@ -22,9 +45,16 @@ motorEncLedMpu32Ros.ino: Please burn this for ROS navigation, motorEncLed32Ros.i
 create_udev_rules_esp32snode.sh, delete_udev_rules_esp32snode.sh, esp32sNodemcu.rules: udev rule for ESP32    
 create_udev_rules_rplidar.sh, delete_udev_rules_rplidar.sh, rplidar.rules: udev rule for RPLidar   
 ```
-## Overview
+
+## Overview   
+ <div align="center">
+  <img src="images/monicar2_3car.png">   
+  <img src="images/monicar2_3d.png">   
+</div>
+
+## Diagram   
 <div align="center">
-  <img src="images/monicar2.png">
+  <img src="images/monicar2.png">   
 </div>
 
 ## Installation
@@ -85,26 +115,54 @@ cd {$workspace_path}/src/monicar2/monicar2_arduino
 ./create_udev_rules_rplidar.sh
 ```
 
-- To bringup robot
-
+- To teleoperate the robot using **GAMEPAD**
 ```bash
 cd {$workspace_path}
-ros2 launch monicar2_localization ekfPose4map.launch.py
+# jetson , terminal 1   
+$ ros2 launch monicar2_bringup mcu.launch.py   
+#jetson or pc terminal 2   
+$ ros2 launch monicar2_teleop teleop_joy.launch.py   
 ```
 
 - To teleoperate the robot using **KEYBOARD**
 
 ```bash
 cd {$workspace_path}
-ros2 run monicar2_teleop teleop_keyboard
+# jetson , terminal 1
+$ ros2 launch monicar2_bringup mcu.launch.py
+#jetson or pc terminal 2
+$ ros2 run monicar2_teleop teleop_keyboard
 ```
 
 - To conduct SLAM (Try after few seconds from MCU and LiDAR bringup)
-
+- Cartographer
 ```bash
 cd {$workspace_path}
-ros2 launch monicar2_cartographer cartographer.launch.py
-ros2 launch monicar2_cartographer cartographer_rviz.launch.py
+$ ros2 launch monicar2_localization ekfPose.launch.py 
+# or using another options
+# example) teleop_joy, not using description
+$ ros2 launch monicar2_localization ekfPose.launch.py use_joy:='true' use_des:='false'
+
+#terminal #2, recommand PC than Jetson
+$ ros2 launch monicar2_cartographer cartographer.launch.py
+#terminal #3, recommand PC than Jetson
+$ ros2 launch monicar2_cartographer cartographer_rviz.launch.py
+```
+- Slam_toolbox
+```bash
+#terminal #1, Jetson
+cd {$workspace_path}
+$ ros2 launch monicar2_localization ekfPose.launch.py 
+# or using another options
+# example) teleop_joy, not using description
+$ ros2 launch monicar2_localization ekfPose.launch.py use_joy:='true' use_des:='false'
+
+#terminal #2,recommand PC than Jetson
+$ ros2 launch nav2_bringup navigation_launch.py
+#terminal #3,recommand PC than Jetson
+$ ros2 launch slam_toolbox online_async_launch.py
+#terminal #4, recommand PC than Jetson
+$ ros2 launch monicar2_navigation2 slamtoolbox_rviz.launch.py
 ```
 
 - Once mapping is done, you can create map.pgm and map.yaml file by executing
@@ -116,8 +174,15 @@ ros2 run nav2_map_server map_saver_cli -f map
 
 - To conduct path planning & following, close all previsous launch.py
 ```bash
+#terminal #1, Jetson
 cd {$workspace_path}
-ros2 launch monicar2_localization ekfPose.launch.py
-ros2 launch monicar2_navigation2 navigation2.launch.py map:=$HOME/map.yaml
-ros2 launch monicar2_navigation2 navigation2_rviz.launch.py
+$ ros2 launch monicar2_localization ekfPose.launch.py initPose:='false'
+# or using another options
+# example) not using description
+$ ros2 launch monicar2_localization ekfPose.launch.py initPose='false' use_des:='false'
+
+#terminal #2,recommand PC than Jetson
+$ ros2 launch monicar2_navigation2 navigation2.launch.py map:=./mymap.yaml
+#terminal #3, recommand PC than Jetson
+$ ros2 launch monicar2_navigation2 navigation2_rviz.launch.py
 ```

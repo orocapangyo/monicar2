@@ -6,7 +6,7 @@ ekf_filter_node:
 # The frequency, in Hz, at which the filter will output a position estimate. Note that the filter will not begin
 # computation until it receives at least one message from one of the inputs. It will then run continuously at the
 # frequency specified here, regardless of whether it receives more measurements. Defaults to 30 if unspecified.
-        frequency: 0.0
+        frequency: 20.0
 
 # The period, in seconds, after which we consider a sensor to have timed out. In this event, we carry out a predict
 # cycle on the EKF without correcting it. This parameter can be thought of as the minimum frequency with which the
@@ -90,7 +90,7 @@ ekf_filter_node:
         odom0_config: [true, true, true,
                        false, false, false,
                        true,  true,  true,
-                       false, false, true,
+                       false, false, false,
                        false, false, false]
 
         #        [x_pos   , y_pos    , z_pos,
@@ -135,10 +135,10 @@ ekf_filter_node:
 
         imu0: imu/data
         imu0_config: [false, false, false,
-                      true,  true,  true,
+                      false,  false,  false,
                       false, false, false,
-                      true,  true,  true,
-                      true,  true,  true]
+                      false,  false,  false,
+                      false,  false,  false]
 
         #        [x_pos   , y_pos    , z_pos,
         #         roll    , pitch    , yaw,

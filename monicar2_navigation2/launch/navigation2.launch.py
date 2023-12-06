@@ -16,7 +16,7 @@
 
 # Author: Bishop Pearson
 
-import os
+from os.path import join
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -24,12 +24,13 @@ from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     map_dir = LaunchConfiguration(
         'map',
-        default=os.path.join(
+        default=join(
             get_package_share_directory('monicar2_navigation2'),
             'map',
             'mymap.yaml'))
@@ -37,12 +38,12 @@ def generate_launch_description():
     param_file_name = 'monicar2.yaml'
     param_dir = LaunchConfiguration(
         'params_file',
-        default=os.path.join(
+        default=join(
             get_package_share_directory('monicar2_navigation2'),
             'param',
             param_file_name))
 
-    nav2_launch_file_dir = os.path.join(get_package_share_directory('nav2_bringup'), 'launch')
+    nav2_launch_file_dir = join(get_package_share_directory('nav2_bringup'), 'launch')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -66,5 +67,5 @@ def generate_launch_description():
                 'map': map_dir,
                 'use_sim_time': use_sim_time,
                 'params_file': param_dir}.items(),
-        )
+        ),
     ])

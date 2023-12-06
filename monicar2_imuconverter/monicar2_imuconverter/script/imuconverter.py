@@ -16,16 +16,16 @@ class ImuNode(Node):
             namespace='',
             parameters=[ 
                 ('timer_tick', 0.0),
-                ('imu_enable', 0),
+                ('useImu', True),
             ])        
 
         self.get_logger().info("Setting Up the Node...")
         self.timer_tick = self.get_parameter_or('timer_tick', Parameter('timer_tick', Parameter.Type.DOUBLE, 0.05)).get_parameter_value().double_value        
-        self.imu_enable = self.get_parameter_or('imu_enable', Parameter('imu_enable', Parameter.Type.INTEGER, 1)).get_parameter_value().integer_value        
+        self.useImu = self.get_parameter_or('useImu', Parameter('useImu', Parameter.Type.BOOL, True)).get_parameter_value().bool_value        
 
-        print('timer_tick: %s sec, imu_enable: %s'%
+        print('timer_tick: %s sec, useImu: %s'%
             (self.timer_tick,
-            self.imu_enable)
+            self.useImu)
         )
         # Set subscriber
         self.quatSub = self.create_subscription(Quaternion, 'quaternion', self.sub_callback, 10)       
@@ -121,7 +121,7 @@ class ImuNode(Node):
         t.header.stamp = self.get_clock().now().to_msg()
 
         # imu data publish or null
-        if self.imu_enable == 1:
+        if self.useImu == True:
             t.transform.rotation =  self.imu_msg.orientation 
             self.br.sendTransform(t)
 
