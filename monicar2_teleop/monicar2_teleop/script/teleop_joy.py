@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 #
 # Copyright (c) 2011, Willow Garage, Inc.
 # All rights reserved.
@@ -43,18 +42,24 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 from rclpy.qos import QoSProfile
 
-MAXCOLOR = 5
+MAXCOLOR = 6
+MAXSONG = 5
+MAXANIM = 3
 
 msg = """
 Control Your Robot!
 ---------------------------
 'A' : Change led
 
-once click : left
-double clicks : right
-three clicks : right & center
-four clicks : All ON
-five clicks : ALL OF
+1'st click : left
+2'nd click : right
+3'rd click : rear
+4'th click : All ON
+5'th click : ALL OFF
+
+'B' : Play buzzer song
+'Y': Play OLED animation
+
 """
 
 class TeleopJoyNode(Node):
@@ -69,13 +74,16 @@ class TeleopJoyNode(Node):
                 ('max_rad_s', 0.0),
             ])
 
-        self.timer_inc = 0
         self.auto_mode = False
-        self.colorIdx = 0
-        self.headlight_on = False
-        self.mode_button_last =0
+        self.chatCount= 0
+        self.mode_button_last = 0
         self.colorIdx = 0           # variable for saving data in ledSub's msg data field
+        self.songIdx = 0            # variable for saving data in songSub's msg data field    
+        self.lcdIdx = 0             # variable for saving data in songSub's msg data field     
+        self.gMsg  =  Int32()           
         self.pub_led = self.create_publisher(Int32, 'ledSub',10) 
+        self.pub_song = self.create_publisher(Int32, 'songSub',10) 
+        self.pub_lcd = self.create_publisher(Int32, 'lcdSub',10) 
         print(' Monicar Teleop Joystick controller')
         print(msg)       
       
@@ -96,30 +104,44 @@ class TeleopJoyNode(Node):
         # generate publisher for 'cmd_vel'
         self.sub = self.create_subscription(Joy, 'joy', self.cb_joy, 10) 
         # generate publisher for 'ledSub
-        self.timer = self.create_timer(0.05, self.cb_timer)
+        self.timer = self.create_timer(0.1, self.cb_timer)
         self.twist = Twist()  
         #generate variable for Twist type msg
 
     def cb_joy(self, joymsg):
-        if joymsg.buttons[2] == 1 and self.mode_button_last == 0:
-            if self.auto_mode == False:
-                self.auto_mode = True
-                self.get_logger().info("AUTO MODE")
-            else:
-                self.auto_mode = False
-                self.get_logger().info("AUTO MODE OFF")
-        self.mode_button_last = joymsg.buttons[2]
-
         if joymsg.axes[1] > 0.0:
             self.twist.linear.x = joymsg.axes[1] * self.max_fwd_vel
         elif joymsg.axes[1] < 0.0:
             self.twist.linear.x = joymsg.axes[1] * self.max_rev_vel
         else:
             self.twist.linear.x = 0.0
+
         if joymsg.buttons[0] == 1 and self.mode_button_last == 0:
+            print('colorIdx: %d'%(self.colorIdx))
+            self.gMsg.data = self.colorIdx 
+            self.pub_led.publish(self.gMsg)           #publishing 'ledSub'
             self.colorIdx+=1
-            if self.colorIdx>MAXCOLOR: 
+            if self.colorIdx >= MAXCOLOR: 
                 self.colorIdx=0
+            self.mode_button_last = joymsg.buttons[0] 
+
+        elif joymsg.buttons[1] == 1 and self.mode_button_last == 0:
+            print('songIdx: %d'%(self.songIdx))
+            self.gMsg.data = self.songIdx 
+            self.pub_song.publish(self.gMsg)         #publishing 'songSub'
+            self.songIdx+=1
+            if self.songIdx>MAXSONG: 
+                self.songIdx=0
+            self.mode_button_last = joymsg.buttons[1]    
+
+        elif joymsg.buttons[4] == 1 and self.mode_button_last == 0:
+            print('lcdIdx: %d'%(self.lcdIdx))
+            self.gMsg.data = self.lcdIdx 
+            self.pub_lcd.publish(self.gMsg)           #publishing 'songSub'
+            self.lcdIdx+=1
+            if self.lcdIdx>MAXANIM: 
+                self.lcdIdx=0
+            self.mode_button_last = joymsg.buttons[4]  
 
         self.twist.linear.y = 0.0
         self.twist.linear.z = 0.0
@@ -130,13 +152,11 @@ class TeleopJoyNode(Node):
         # print('V= %.2f m/s, W= %.2f deg/s'%(self.twist.linear.x, self.twist.angular.z))
 
     def cb_timer(self):
-        self.timer_inc+=1
-        if self.auto_mode == False:
-            self.pub_twist.publish(self.twist)  #publishing 'cmd_vel'
-
-        led_msg = Int32()                       #generate variable for Int32 type msg
-        led_msg.data = self.colorIdx 
-        self.pub_led.publish(led_msg)           #publishing 'ledSub'
+        self.pub_twist.publish(self.twist)  # publishing 'cmd_vel'
+        self.chatCount += 1                 # protect chattering
+        if self.chatCount > 3:
+            self.mode_button_last = 0
+            self.chatCount = 0
 
 def main(args=None):
     rclpy.init(args=args) 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 #
 # Copyright (c) 2011, Willow Garage, Inc.
 # All rights reserved.
@@ -56,7 +55,9 @@ MAX_ANG_VEL = 0.8
 LIN_VEL_STEP_SIZE = 0.03
 ANG_VEL_STEP_SIZE = 0.1
 
-MAXCOLOR = 5
+MAXCOLOR = 6
+MAXSONG = 5
+MAXANIM = 3
 
 msg = """
 Control Your Robot!
@@ -73,11 +74,13 @@ space key, s : force stop
 
 c : Change led
 1'st click : left
-2'nd clicks : right
-3'rd clicks : right & center
-4'th clicks : All ON
-5'th clicks : ALL OF
+2'nd click : right
+3'rd click : rear
+4'th click : All ON
+5'th click : ALL OFF
 
+z: play buzzer song
+p: OLED animation
 
 CTRL-C to quit
 """
@@ -144,9 +147,11 @@ def main():
     )
 
     qos = QoSProfile(depth=10) 
-    node = rclpy.create_node('teleop_keyboard_node')    # generate node 
-    pub = node.create_publisher(Twist, 'cmd_vel', qos)  # generate publisher for 'cmd_vel'
-    ledpub = node.create_publisher(Int32, 'ledSub',10)  # generate publisher for 'ledSub'
+    node = rclpy.create_node('teleop_keyboard_node')        # generate node 
+    pub = node.create_publisher(Twist, 'cmd_vel', qos)      # generate publisher for 'cmd_vel'
+    ledpub = node.create_publisher(Int32, 'ledSub',10)      # generate publisher for 'ledSub'
+    songpub = node.create_publisher(Int32, 'songSub',10)    # generate publisher for 'songpub'
+    lcdpub = node.create_publisher(Int32, 'lcdSub',10)      # generate publisher for 'lcdpub'
 
     print('Monicar Teleop Keyboard controller')
 
@@ -156,6 +161,9 @@ def main():
     control_linear_velocity = 0.0
     control_angular_velocity = 0.0
     colorIdx = 0                                        # variable for saving data in ledSub's msg data field 
+    songIdx = 0                                         # variable for saving data in songSub's msg data field
+    lcdIdx = 0
+    gMsg = Int32() 
 
     try:
         print(msg)
@@ -187,10 +195,30 @@ def main():
                 target_angular_velocity = 0.0
                 control_angular_velocity = 0.0
                 print_vels(target_linear_velocity, target_angular_velocity)
-            elif key == 'c':            # led control
+            elif key == 'c':                # led control
+                print('colorIdx: %d'%(colorIdx))
+                gMsg.data = colorIdx
+                ledpub.publish(gMsg)       
                 colorIdx += 1
-                if colorIdx > MAXCOLOR:
+                if colorIdx >= MAXCOLOR:
                     colorIdx = 0
+
+            elif key == 'z':                # play buzzer song
+                print('songIdx: %d'%(songIdx))
+                gMsg.data = songIdx
+                songpub.publish(gMsg)       
+                songIdx += 1
+                if songIdx >= MAXSONG:
+                    songIdx = 0
+                
+            elif key == 'p':                # play oled animation
+                print('lcdIdx: %d'%(lcdIdx))
+                gMsg.data = lcdIdx
+                lcdpub.publish(gMsg)        
+                lcdIdx += 1
+                if lcdIdx >= MAXANIM:
+                    lcdIdx = 0
+   
             else:
                 if (key == '\x03'):
                     break
@@ -219,9 +247,6 @@ def main():
             twist.angular.z = control_angular_velocity
 
             pub.publish(twist)      #publishing 'cmd_vel'
-            led_msg = Int32()       #generate variable for Int32 type msg
-            led_msg.data = colorIdx
-            ledpub.publish(led_msg) #publishing 'ledSub'
 
     except Exception as e:  
         print(e)
