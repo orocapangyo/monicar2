@@ -42,9 +42,9 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Joy
 from rclpy.qos import QoSProfile
 
-MAXCOLOR = 6
-MAXSONG = 5
-MAXANIM = 3
+MAX_SONG = 5
+MAX_ANIM = 3
+MAX_COLOR = 6
 
 msg = """
 Control Your Robot!
@@ -68,7 +68,7 @@ class TeleopJoyNode(Node):
         super().__init__('teleop_joy_node')
         self.declare_parameters(    # bring the param from yaml file
             namespace='',
-            parameters=[ 
+            parameters=[
                 ('max_fwd_m_s', 0.0),
                 ('max_rev_m_s', 0.0),
                 ('max_rad_s', 0.0),
@@ -78,16 +78,16 @@ class TeleopJoyNode(Node):
         self.chatCount= 0
         self.mode_button_last = 0
         self.colorIdx = 0           # variable for saving data in ledSub's msg data field
-        self.songIdx = 0            # variable for saving data in songSub's msg data field    
-        self.lcdIdx = 0             # variable for saving data in songSub's msg data field     
-        self.gMsg  =  Int32()           
-        self.pub_led = self.create_publisher(Int32, 'ledSub',10) 
-        self.pub_song = self.create_publisher(Int32, 'songSub',10) 
-        self.pub_lcd = self.create_publisher(Int32, 'lcdSub',10) 
+        self.songIdx = 0            # variable for saving data in songSub's msg data field
+        self.lcdIdx = 0             # variable for saving data in songSub's msg data field
+        self.gMsg  =  Int32()
+        self.pub_led = self.create_publisher(Int32, 'ledSub',10)
+        self.pub_song = self.create_publisher(Int32, 'songSub',10)
+        self.pub_lcd = self.create_publisher(Int32, 'lcdSub',10)
         print(' Monicar Teleop Joystick controller')
-        print(msg)       
-      
-        self.max_fwd_vel = self.get_parameter_or('max_fwd_m_s', Parameter('max_fwd_m_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value        
+        print(msg)
+
+        self.max_fwd_vel = self.get_parameter_or('max_fwd_m_s', Parameter('max_fwd_m_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value
         self.max_rev_vel = self.get_parameter_or('max_rev_m_s', Parameter('max_rev_m_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value
         self.max_ang_vel = self.get_parameter_or('max_rad_s', Parameter('max_rad_s', Parameter.Type.DOUBLE, 0.2)).get_parameter_value().double_value
 
@@ -96,16 +96,16 @@ class TeleopJoyNode(Node):
             self.max_rev_vel,
             self.max_ang_vel)
         )
-        
+
         print('CTRL-C to quit')
 
         self.qos = QoSProfile(depth=10)
-        self.pub_twist = self.create_publisher(Twist, 'cmd_vel', self.qos) 
+        self.pub_twist = self.create_publisher(Twist, 'cmd_vel', self.qos)
         # generate publisher for 'cmd_vel'
-        self.sub = self.create_subscription(Joy, 'joy', self.cb_joy, 10) 
+        self.sub = self.create_subscription(Joy, 'joy', self.cb_joy, 10)
         # generate publisher for 'ledSub
         self.timer = self.create_timer(0.1, self.cb_timer)
-        self.twist = Twist()  
+        self.twist = Twist()
         #generate variable for Twist type msg
 
     def cb_joy(self, joymsg):
@@ -118,30 +118,30 @@ class TeleopJoyNode(Node):
 
         if joymsg.buttons[0] == 1 and self.mode_button_last == 0:
             print('colorIdx: %d'%(self.colorIdx))
-            self.gMsg.data = self.colorIdx 
+            self.gMsg.data = self.colorIdx
             self.pub_led.publish(self.gMsg)           #publishing 'ledSub'
             self.colorIdx+=1
-            if self.colorIdx >= MAXCOLOR: 
+            if self.colorIdx >= MAX_COLOR:
                 self.colorIdx=0
-            self.mode_button_last = joymsg.buttons[0] 
+            self.mode_button_last = joymsg.buttons[0]
 
         elif joymsg.buttons[1] == 1 and self.mode_button_last == 0:
             print('songIdx: %d'%(self.songIdx))
-            self.gMsg.data = self.songIdx 
+            self.gMsg.data = self.songIdx
             self.pub_song.publish(self.gMsg)         #publishing 'songSub'
             self.songIdx+=1
-            if self.songIdx>MAXSONG: 
+            if self.songIdx >= MAX_SONG:
                 self.songIdx=0
-            self.mode_button_last = joymsg.buttons[1]    
+            self.mode_button_last = joymsg.buttons[1]
 
         elif joymsg.buttons[4] == 1 and self.mode_button_last == 0:
             print('lcdIdx: %d'%(self.lcdIdx))
-            self.gMsg.data = self.lcdIdx 
+            self.gMsg.data = self.lcdIdx
             self.pub_lcd.publish(self.gMsg)           #publishing 'songSub'
             self.lcdIdx+=1
-            if self.lcdIdx>MAXANIM: 
+            if self.lcdIdx >= MAX_ANIM:
                 self.lcdIdx=0
-            self.mode_button_last = joymsg.buttons[4]  
+            self.mode_button_last = joymsg.buttons[4]
 
         self.twist.linear.y = 0.0
         self.twist.linear.z = 0.0
@@ -159,11 +159,11 @@ class TeleopJoyNode(Node):
             self.chatCount = 0
 
 def main(args=None):
-    rclpy.init(args=args) 
-    teleop_joy =  TeleopJoyNode() 
-    rclpy.spin(teleop_joy) 
-    teleop_joy.destroy_node() 
-    rclpy.shutdown() 
+    rclpy.init(args=args)
+    teleop_joy =  TeleopJoyNode()
+    rclpy.spin(teleop_joy)
+    teleop_joy.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

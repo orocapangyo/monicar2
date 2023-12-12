@@ -40,13 +40,13 @@ from rclpy.logging import get_logger
 from rclpy.node import Node
 
 from geometry_msgs.msg import Twist  # linear speed,angle speed msg type (for x,y,z)
-from std_msgs.msg import Int32 
+from std_msgs.msg import Int32
 from rclpy.qos import QoSProfile
 
-if os.name == 'nt':  
+if os.name == 'nt':
     import msvcrt
 else:
-    import termios  
+    import termios
     import tty
 
 
@@ -55,9 +55,9 @@ MAX_ANG_VEL = 0.8
 LIN_VEL_STEP_SIZE = 0.03
 ANG_VEL_STEP_SIZE = 0.1
 
-MAXCOLOR = 6
-MAXSONG = 5
-MAXANIM = 3
+MAX_SONG = 5
+MAX_ANIM = 3
+MAX_COLOR = 6
 
 msg = """
 Control Your Robot!
@@ -92,32 +92,32 @@ Communications Failed
 def get_key(settings):
     if os.name == 'nt':
         return msvcrt.getch().decode('utf-8')
-    tty.setraw(sys.stdin.fileno()) 
-    rlist, _, _ = select.select([sys.stdin], [], [], 0.1)  
+    tty.setraw(sys.stdin.fileno())
+    rlist, _, _ = select.select([sys.stdin], [], [], 0.1)
     if rlist:  # if valid, save to key
         key = sys.stdin.read(1)
     else:       # else, initialize
         key = ''
 
-    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)  
+    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
     return key
 
-def print_vels(target_linear_velocity, target_angular_velocity):  
+def print_vels(target_linear_velocity, target_angular_velocity):
     print('currently:\tlinear velocity {0}\t angular velocity {1} '.format(
         target_linear_velocity,
         target_angular_velocity))
 
-def make_simple_profile(output, input, slop): 
-    if input > output: 
-        output = min(input, output + slop)  
+def make_simple_profile(output, input, slop):
+    if input > output:
+        output = min(input, output + slop)
     elif input < output:  # if variance is bigger
-        output = max(input, output - slop)  
+        output = max(input, output - slop)
     else:
         output = input
 
     return output
 
-def constrain(input_vel, low_bound, high_bound):  
+def constrain(input_vel, low_bound, high_bound):
     if input_vel < low_bound:
         input_vel = low_bound
     elif input_vel > high_bound:
@@ -139,15 +139,15 @@ def main():
     if os.name != 'nt':
         settings = termios.tcgetattr(sys.stdin)
 
-    rclpy.init()  
+    rclpy.init()
 
     print('Param max lin: %s m/s, max ang: %s rad/s, lin step: %s m/s ang step: %s rad/s'%
         (MAX_LIN_VEL, MAX_ANG_VEL,
         LIN_VEL_STEP_SIZE, ANG_VEL_STEP_SIZE)
     )
 
-    qos = QoSProfile(depth=10) 
-    node = rclpy.create_node('teleop_keyboard_node')        # generate node 
+    qos = QoSProfile(depth=10)
+    node = rclpy.create_node('teleop_keyboard_node')        # generate node
     pub = node.create_publisher(Twist, 'cmd_vel', qos)      # generate publisher for 'cmd_vel'
     ledpub = node.create_publisher(Int32, 'ledSub',10)      # generate publisher for 'ledSub'
     songpub = node.create_publisher(Int32, 'songSub',10)    # generate publisher for 'songpub'
@@ -160,10 +160,10 @@ def main():
     target_angular_velocity = 0.0
     control_linear_velocity = 0.0
     control_angular_velocity = 0.0
-    colorIdx = 0                                        # variable for saving data in ledSub's msg data field 
+    colorIdx = 0                                        # variable for saving data in ledSub's msg data field
     songIdx = 0                                         # variable for saving data in songSub's msg data field
     lcdIdx = 0
-    gMsg = Int32() 
+    gMsg = Int32()
 
     try:
         print(msg)
@@ -198,57 +198,57 @@ def main():
             elif key == 'c':                # led control
                 print('colorIdx: %d'%(colorIdx))
                 gMsg.data = colorIdx
-                ledpub.publish(gMsg)       
+                ledpub.publish(gMsg)
                 colorIdx += 1
-                if colorIdx >= MAXCOLOR:
+                if colorIdx >= MAX_COLOR:
                     colorIdx = 0
 
             elif key == 'z':                # play buzzer song
                 print('songIdx: %d'%(songIdx))
                 gMsg.data = songIdx
-                songpub.publish(gMsg)       
+                songpub.publish(gMsg)
                 songIdx += 1
-                if songIdx >= MAXSONG:
+                if songIdx >= MAX_SONG:
                     songIdx = 0
-                
+
             elif key == 'p':                # play oled animation
                 print('lcdIdx: %d'%(lcdIdx))
                 gMsg.data = lcdIdx
-                lcdpub.publish(gMsg)        
+                lcdpub.publish(gMsg)
                 lcdIdx += 1
-                if lcdIdx >= MAXANIM:
+                if lcdIdx >= MAX_ANIM:
                     lcdIdx = 0
-   
+
             else:
                 if (key == '\x03'):
                     break
 
             if status == 20:
-                print(msg)  
+                print(msg)
                 status = 0
 
             twist = Twist()         #generate variable for Twist type msg
 
-            control_linear_velocity = make_simple_profile(  
+            control_linear_velocity = make_simple_profile(
                 control_linear_velocity,
                 target_linear_velocity,
-                (LIN_VEL_STEP_SIZE / 2.0))  
+                (LIN_VEL_STEP_SIZE / 2.0))
 
-            twist.linear.x = control_linear_velocity  
+            twist.linear.x = control_linear_velocity
             twist.linear.y = 0.0
             twist.linear.z = 0.0
 
-            control_angular_velocity = make_simple_profile(  
+            control_angular_velocity = make_simple_profile(
                 control_angular_velocity,
                 target_angular_velocity,
-                (ANG_VEL_STEP_SIZE / 2.0))  
-            twist.angular.x = 0.0  
+                (ANG_VEL_STEP_SIZE / 2.0))
+            twist.angular.x = 0.0
             twist.angular.y = 0.0
             twist.angular.z = control_angular_velocity
 
             pub.publish(twist)      #publishing 'cmd_vel'
 
-    except Exception as e:  
+    except Exception as e:
         print(e)
 
     finally:  #
@@ -264,7 +264,7 @@ def main():
         pub.publish(twist)
 
         if os.name != 'nt':
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings) 
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
 
 if __name__ == '__main__':
     main()

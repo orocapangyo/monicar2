@@ -529,10 +529,10 @@ void setup() {
 #endif
   DEBUG_PRINTLN("Enc/Motor/MPU6050/Other Starts");
 
-  pinMode(LED_L, OUTPUT);  // RGB color lights red control pin configuration output
-  pinMode(LED_R, OUTPUT);  // RGB color light green control pin configuration output
-  pinMode(LED_B, OUTPUT);  // RGB color light blue control pin configuration output
-  RGB(ALL_OFF);            // RGB LED all off
+  pinMode(LED_L, OUTPUT);
+  pinMode(LED_R, OUTPUT);
+  pinMode(LED_F, OUTPUT);
+  RGB(ALL_OFF);  // RGB LED all off
 
   // Set pin states of the encoder
   pinMode(ENC_IN_LEFT_A, INPUT_PULLUP);

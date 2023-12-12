@@ -215,6 +215,9 @@ int *melArray[] = { melody_pink, melody_bear, melody_birthday, melody_star, melo
 int sizeArray[] = { 23, 19, 25, 29, 22 };
 
 void playsong(int song) {
+
+  song = song % MAX_SONG;
+
   int size = sizeArray[song];
   for (int note = 0; note < size; note++) {
 
@@ -237,37 +240,37 @@ void RGB(int ledbehav) {
     case ALL_OFF:
       digitalWrite(LED_R, LOW);
       digitalWrite(LED_L, LOW);
-      digitalWrite(LED_B, LOW);
+      digitalWrite(LED_F, LOW);
       break;
-    case LEDBACK:
+    case LEDFRONT:
       digitalWrite(LED_R, LOW);
       digitalWrite(LED_L, LOW);
-      digitalWrite(LED_B, HIGH);
+      digitalWrite(LED_F, HIGH);
       break;
     case LEDLEFT:
       digitalWrite(LED_R, LOW);
       digitalWrite(LED_L, HIGH);
-      digitalWrite(LED_B, LOW);
+      digitalWrite(LED_F, LOW);
       break;
     case LEDRIGHT:
       digitalWrite(LED_R, HIGH);
       digitalWrite(LED_L, LOW);
-      digitalWrite(LED_B, LOW);
+      digitalWrite(LED_F, LOW);
       break;
-    case LEDFRONT:
+    case LEDREAR:
       digitalWrite(LED_R, HIGH);
       digitalWrite(LED_L, HIGH);
-      digitalWrite(LED_B, LOW);
+      digitalWrite(LED_F, LOW);
       break;
     case ALL_ON:
       digitalWrite(LED_R, HIGH);
       digitalWrite(LED_L, HIGH);
-      digitalWrite(LED_B, HIGH);
+      digitalWrite(LED_F, HIGH);
       break;
     default:
       digitalWrite(LED_R, LOW);
       digitalWrite(LED_L, LOW);
-      digitalWrite(LED_B, LOW);
+      digitalWrite(LED_F, LOW);
       break;
   }
 }
@@ -281,12 +284,14 @@ void beginLcd(void) {
   display.println("Monicar II");  // set text
   display.setTextSize(1);         // set text size
   display.setCursor(0, 17);       // set position to display
-  display.println("wait Jetson up");
+  display.println("wait IP of Jetson ");
   display.display();  // display on OLED
 }
 
 void showAnimation(int idx) {
   int icount, frame, maxFrame;
+
+  idx = idx % MAX_ANIM;
 
   if (idx == 0)
     maxFrame = FRAME0_COUNT;
