@@ -45,18 +45,13 @@ from rclpy.qos import QoSProfile
 MAX_SONG = 5
 MAX_ANIM = 3
 MAX_COLOR = 6
+MAX_CHAT = 5
+TIMER_JOY = 0.1
 
 msg = """
 Control Your Robot!
 ---------------------------
 'A' : Change led
-
-1'st click : left
-2'nd click : right
-3'rd click : rear
-4'th click : All ON
-5'th click : ALL OFF
-
 'B' : Play buzzer song
 'Y': Play OLED animation
 
@@ -104,7 +99,7 @@ class TeleopJoyNode(Node):
         # generate publisher for 'cmd_vel'
         self.sub = self.create_subscription(Joy, 'joy', self.cb_joy, 10)
         # generate publisher for 'ledSub
-        self.timer = self.create_timer(0.1, self.cb_timer)
+        self.timer = self.create_timer(TIMER_JOY, self.cb_timer)
         self.twist = Twist()
         #generate variable for Twist type msg
 
@@ -154,7 +149,7 @@ class TeleopJoyNode(Node):
     def cb_timer(self):
         self.pub_twist.publish(self.twist)  # publishing 'cmd_vel'
         self.chatCount += 1                 # protect chattering
-        if self.chatCount > 3:
+        if self.chatCount > MAX_CHAT:
             self.mode_button_last = 0
             self.chatCount = 0
 

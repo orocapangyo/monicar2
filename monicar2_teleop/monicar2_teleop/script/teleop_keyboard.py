@@ -72,13 +72,7 @@ a/d : increase/decrease angular velocity
 
 space key, s : force stop
 
-c : Change led
-1'st click : left
-2'nd click : right
-3'rd click : rear
-4'th click : All ON
-5'th click : ALL OFF
-
+c: Change led
 z: play buzzer song
 p: OLED animation
 
