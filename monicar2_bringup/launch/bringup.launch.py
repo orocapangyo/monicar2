@@ -18,12 +18,11 @@ def generate_launch_description():
     IncludeLaunchDescription(
       PythonLaunchDescriptionSource([
         FindPackageShare("monicar2_imuconverter"), '/launch', '/mpu6050.launch.py'])
-    ), 
+    ),
 
     IncludeLaunchDescription(
       PythonLaunchDescriptionSource([
         FindPackageShare("monicar2_bringup"), '/launch', '/rplidar.launch.py'])
-    ), 
-
+    ),
 
   ])

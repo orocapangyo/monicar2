@@ -31,7 +31,7 @@ def generate_launch_description():
     Node(
         package='monicar2_localization', executable='odomPublisher', name='odompub_node',
         output='screen',
-        parameters=[odom_parameter,  
+        parameters=[odom_parameter,
                   {'initPoseRecieved': initPose}],
         emulate_tty=True,
     ),

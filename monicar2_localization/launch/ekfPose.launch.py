@@ -20,18 +20,18 @@ def generate_launch_description():
   use_joy = LaunchConfiguration('use_joy', default='false')
 
   declare_initPose = DeclareLaunchArgument(
-    name='initPose', 
-    default_value=initPose, 
+    name='initPose',
+    default_value=initPose,
     description='Whether initPose is clicked already')
 
   declare_use_desc= DeclareLaunchArgument(
-    name='use_des', 
-    default_value=use_des, 
+    name='use_des',
+    default_value=use_des,
     description='Whether to start robot description')
 
   declare_use_joy= DeclareLaunchArgument(
-    name='use_joy', 
-    default_value=use_joy, 
+    name='use_joy',
+    default_value=use_joy,
     description='Whether to start joystick')
 
   run_odompub = IncludeLaunchDescription(
@@ -68,7 +68,7 @@ def generate_launch_description():
 
   # Add any actions
   ld.add_action(run_odompub)
-  ld.add_action(run_rvizClick2d) 
+  ld.add_action(run_rvizClick2d)
   ld.add_action(run_description)
   ld.add_action(run_joystick)
 

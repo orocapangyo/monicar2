@@ -18,7 +18,6 @@ def generate_launch_description():
   ),
 
   return LaunchDescription([
-    
     # Start robot localization using an Extended Kalman filter
     Node(
         package='robot_localization',
