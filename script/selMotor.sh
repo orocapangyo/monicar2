@@ -9,14 +9,12 @@ if [ "$#" -lt 1 ]; then
 fi
 
 echo "set MOTOR_TYPE to" "$1"
-
+echo 'set TPR in monicar2_localization/param/robot.yaml'
 if [ "$1" == "MOTOR_178RPM" ]; then
     sed -i "s/TPR: 1860.0/TPR: 620.0/g" ../monicar2_localization/param/robot.yaml
 else
     sed -i "s/TPR: 620.0/TPR: 1860.0/g" ../monicar2_localization/param/robot.yaml
 fi
-
-exit 1
 
 cd ../arduino/
 for filename in ./*.ino; do

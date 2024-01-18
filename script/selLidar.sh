@@ -9,9 +9,9 @@ if [ "$#" -lt 1 ]; then
 fi
 
 if [ "$1" == "rplidar" ]; then
-    echo "rplidar set"
+    echo "set Lidar to rplidar"
     sed -i 's/ydlidar/rplidar/g' ../monicar2_bringup/launch/bringup.launch.py
 else
-    echo "ydlidar set"
+    echo "set Lidar ydlidar"
     sed -i 's/rplidar/ydlidar/g' ../monicar2_bringup/launch/bringup.launch.py
 fi
