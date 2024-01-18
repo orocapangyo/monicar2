@@ -14,4 +14,4 @@ if [ "$1" == "rplidar" ]; then
 else
     echo "ydlidar set"
     sed -i 's/rplidar/ydlidar/g' ../monicar2_bringup/launch/bringup.launch.py
-fi 
+fi

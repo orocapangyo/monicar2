@@ -21,6 +21,13 @@
 #include <geometry_msgs/msg/twist.h>
 #include <PID_v1.h>
 
+#define DOMAINID 108
+
+// Please select motor type
+#define MOTOR_60RPM 1
+#define MOTOR_178RPM 2
+#define MOTOR_TYPE MOTOR_60RPM
+
 rcl_publisher_t left_pub, right_pub;
 rcl_subscription_t cmd_vel_sub;
 
@@ -63,27 +70,30 @@ double Kd = 1.0;   //Determines how aggressively the PID reacts to the change in
 PID trackPIDLeft(&trackErrorL, &trackAdjustValueL, &trackSetpointL, Kp, Ki, Kd, DIRECT);
 PID trackPIDRight(&trackErrorR, &trackAdjustValueR, &trackSetpointR, Kp, Ki, Kd, DIRECT);
 
-////////////////// Motor Controller Variables and Constants ///////////////////
-// Encoder output to Arduino Interrupt pin. Tracks the tick count.
+// Encoder output to Arduino Interrupt pin. Tracks the tick count
+#if MOTOR_TYPE == MOTOR_60RPM
 #define ENC_IN_LEFT_A 36
 #define ENC_IN_RIGHT_A 34
-// Other encoder output to Arduino to keep track of wheel direction
-// Tracks the direction of rotation.
 #define ENC_IN_LEFT_B 39
 #define ENC_IN_RIGHT_B 35
-
-// Motor A connections, Left
-#define ENA 32
-// Motor B connections, Right
-#define ENB 33
-
-#define ENA_CH 0
-#define ENB_CH 1
-
+#else
+#define ENC_IN_LEFT_A 39
+#define ENC_IN_RIGHT_A 35
+#define ENC_IN_LEFT_B 36
+#define ENC_IN_RIGHT_B 34
+#endif
+// Motor A, B control
 #define AIN1 26
 #define AIN2 25
 #define BIN1 27
 #define BIN2 14
+
+// Motor speed control via PWM
+#define ENA 32
+#define ENB 33
+#define ENA_CH 0
+#define ENB_CH 1
+
 #define STBY 4
 
 // True = Forward; False = Reverse
@@ -409,11 +419,16 @@ void setup() {
 #endif
   DEBUG_PRINTLN("Enc/Motor Starts");
 
-  // Set pin states of the encoder
-  pinMode(ENC_IN_LEFT_A, INPUT_PULLUP);
+ // Set pin states of the encoder
+  pinMode(ENC_IN_LEFT_A, INPUT);
   pinMode(ENC_IN_LEFT_B, INPUT);
-  pinMode(ENC_IN_RIGHT_A, INPUT_PULLUP);
+  pinMode(ENC_IN_LEFT_A, INPUT_PULLUP);
+  pinMode(ENC_IN_LEFT_B, INPUT_PULLUP);
+
+  pinMode(ENC_IN_RIGHT_A, INPUT);
   pinMode(ENC_IN_RIGHT_B, INPUT);
+  pinMode(ENC_IN_RIGHT_A, INPUT_PULLUP);
+  pinMode(ENC_IN_RIGHT_B, INPUT_PULLUP);
 
   // Every time the pin goes high, this is a tick
   attachInterrupt(digitalPinToInterrupt(ENC_IN_LEFT_A), left_wheel_tick, RISING);
@@ -432,8 +447,8 @@ void setup() {
   digitalWrite(BIN2, LOW);
   digitalWrite(STBY, HIGH);
 
-  ledcSetup(ENA_CH, 5000, 8);  //ENA, channel: 0, 5000Hz, 8bits = 256(0 ~ 255)
-  ledcSetup(ENB_CH, 5000, 8);  //enB, channel: 1, 5000Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENA_CH, 500, 8);  //ENA, channel: 0, 500Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENB_CH, 500, 8);  //enB, channel: 1, 500Hz, 8bits = 256(0 ~ 255)
 
   ledcAttachPin(ENA, ENA_CH);
   ledcAttachPin(ENB, ENB_CH);
@@ -453,13 +468,14 @@ void setup() {
 
   allocator = rcl_get_default_allocator();
 
-  //create allocator
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+   rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
+  RCCHECK(rcl_init_options_init(&init_options, allocator));
+  rcl_init_options_set_domain_id(&init_options, DOMAINID);
+  // create init_options
+  RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
   DEBUG_PRINTLN("rclc_support_init done");
 
-  rcl_node_options_t node_ops = rcl_node_get_default_options();
-  node_ops.domain_id = 108;
-  RCCHECK(rclc_node_init_with_options(&node, "uros_arduino_node", "", &support, &node_ops));
+  RCCHECK(rclc_node_init_default(&node, "uros_arduino_node", "", &support));
   DEBUG_PRINTLN("rclc_node_init done");
 
   // create publisher

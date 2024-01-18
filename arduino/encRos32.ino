@@ -18,6 +18,8 @@
 #include <std_msgs/msg/float32.h>
 #include <geometry_msgs/msg/twist.h>
 
+#define DOMAINID 108
+
 rcl_publisher_t left_pub, right_pub;
 
 std_msgs__msg__Int32 right_wheel_tick_count;
@@ -172,12 +174,16 @@ void setup() {
 
   allocator = rcl_get_default_allocator();
 
-  //create init_options
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  rcl_init_options_t init_options = rcl_get_zero_initialized_init_options();
+  RCCHECK(rcl_init_options_init(&init_options, allocator));
+  rcl_init_options_set_domain_id(&init_options, DOMAINID);
+  // create init_options
+  RCCHECK(rclc_support_init_with_options(&support, 0, NULL, &init_options, &allocator));
+  DEBUG_PRINTLN("rclc_support_init done");
 
-  rcl_node_options_t node_ops = rcl_node_get_default_options();
-  node_ops.domain_id = 108;
-  RCCHECK(rclc_node_init_with_options(&node, "uros_arduino_node", "", &support, &node_ops));
+  RCCHECK(rclc_node_init_default(&node, "uros_arduino_node", "", &support));
+  DEBUG_PRINTLN("rclc_node_init done");
+
 
   // create publisher
   RCCHECK(rclc_publisher_init_default(

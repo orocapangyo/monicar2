@@ -4,20 +4,33 @@
 if [ "$#" -lt 1 ]; then
     echo "Usage: $0 target"
     echo "target: select one of these RPM"
-    echo "60, 178"
+    echo "MOTOR_60RPM, MOTOR_178RPM"
 	exit 1
 fi
 
-if [ "$1" == "178" ]; then
-    echo "178RPM motor set"
-    sed -i 's/MOTOR_TYPE MOTOR_60RPM/MOTOR_TYPE MOTOR_178RPM/g' ../arduino/motorController32Test.ino
-    sed -i 's/MOTOR_TYPE MOTOR_60RPM/MOTOR_TYPE MOTOR_178RPM/g' ../arduino/motorEncLedMpuRos32.ino
-    sed -i 's/MOTOR_TYPE MOTOR_60RPM/MOTOR_TYPE MOTOR_178RPM/g' ../arduino/motorEncExtraRos32/motorEncExtraRos32.ino
-    sed -i 's/1860.0/620.0/g' ../monicar2_localization/param/robot.yaml
+echo "set MOTOR_TYPE to" "$1"
+
+if [ "$1" == "MOTOR_178RPM" ]; then
+    sed -i "s/TPR: 1860.0/TPR: 620.0/g" ../monicar2_localization/param/robot.yaml
 else
-    echo "60RPM motor set"
-    sed -i 's/MOTOR_TYPE MOTOR_178RPM/MOTOR_TYPE MOTOR_60RPM/g' ../arduino/motorController32Test.ino
-    sed -i 's/MOTOR_TYPE MOTOR_178RPM/MOTOR_TYPE MOTOR_60RPM/g' ../arduino/motorEncLedMpuRos32.ino
-    sed -i 's/MOTOR_TYPE MOTOR_178RPM/MOTOR_TYPE MOTOR_60RPM/g' ../arduino/motorEncExtraRos32/motorEncExtraRos32.ino
-    sed -i 's/620.0/1860.0/g' ../monicar2_localization/param/robot.yaml
-fi 
+    sed -i "s/TPR: 620.0/TPR: 1860.0/g" ../monicar2_localization/param/robot.yaml
+fi
+
+exit 1
+
+cd ../arduino/
+for filename in ./*.ino; do
+	if [[ $(awk '/MOTOR_TYPE/' "$filename") ]]; then
+		echo 'Matched' "$filename"
+		sed -i "s/#define MOTOR_TYPE.*/#define MOTOR_TYPE $1/g" "$filename"
+	fi
+done
+
+cd motorEncExtraRos32
+for filename in ./*.ino; do
+	if [[ $(awk '/MOTOR_TYPE/' "$filename") ]]; then
+		echo 'Matched' "$filename"
+		sed -i "s/#define MOTOR_TYPE.*/#define MOTOR_TYPE $1/g" "$filename"
+	fi
+done
+
