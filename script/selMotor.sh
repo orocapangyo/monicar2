@@ -17,11 +17,15 @@ else
 fi
 
 cd ../arduino/
-for filename in ./*.ino; do
-	if [[ $(awk '/MOTOR_TYPE/' "$filename") ]]; then
-		echo 'Matched' "$filename"
-		sed -i "s/#define MOTOR_TYPE.*/#define MOTOR_TYPE $1/g" "$filename"
-	fi
+for d in ./*/; do
+	cd "$d";
+	for filename in ./*.ino; do
+		if [[ $(awk '/MOTOR_TYPE/' "$filename") ]]; then
+			echo 'Matched' "$filename"
+			sed -i "s/#define MOTOR_TYPE.*/#define MOTOR_TYPE $1/g" "$filename"
+		fi
+	done
+	cd ..
 done
 
 cd motorEncExtraRos32
