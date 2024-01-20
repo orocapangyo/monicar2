@@ -10,17 +10,13 @@ fi
 echo "set DOMAINID to" "$1"
 
 cd ../arduino/
-for filename in ./*.ino; do
-	if [[ $(awk '/DOMAINID/' "$filename") ]]; then
-		echo 'Matched' "$filename"
-		sed -i "s/#define DOMAINID.*/#define DOMAINID $1/g" "$filename"
-	fi
-done
-
-cd motorEncExtraRos32
-for filename in ./*.ino; do
-	if [[ $(awk '/DOMAINID/' "$filename") ]]; then
-		echo 'Matched' "$filename"
-		sed -i "s/#define DOMAINID.*/#define DOMAINID $1/g" "$filename"
-	fi
+for d in ./*/; do
+	cd "$d";
+	for filename in ./*.ino; do
+		if [[ $(awk '/DOMAINID/' "$filename") ]]; then
+			echo 'Matched' "$filename"
+			sed -i "s/#define DOMAINID.*/#define DOMAINID $1/g" "$filename"
+		fi
+	done
+	cd ..
 done

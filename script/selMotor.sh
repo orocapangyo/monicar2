@@ -27,12 +27,3 @@ for d in ./*/; do
 	done
 	cd ..
 done
-
-cd motorEncExtraRos32
-for filename in ./*.ino; do
-	if [[ $(awk '/MOTOR_TYPE/' "$filename") ]]; then
-		echo 'Matched' "$filename"
-		sed -i "s/#define MOTOR_TYPE.*/#define MOTOR_TYPE $1/g" "$filename"
-	fi
-done
-

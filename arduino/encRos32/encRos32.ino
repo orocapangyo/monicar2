@@ -23,7 +23,7 @@
 
 #define MOTOR_60RPM 1
 #define MOTOR_178RPM 2
-#define MOTOR_TYPE MOTOR_178RPM
+#define MOTOR_TYPE MOTOR_60RPM
 
 rcl_publisher_t left_pub, right_pub;
 
