@@ -22,6 +22,7 @@
 #define PRINT_VEL 0
 #define PRINT_PIDERR 0
 #define PRINT_AVGPWM 0
+#define PRINT_INSPWM 1
 
 double trackAdjustValueL = 0.0;
 double trackSetpointL = 0.0;
@@ -96,17 +97,15 @@ long currentMillis = 0;
 #define PWM_MIN 43.0   // about 0.03 m/s
 #define PWM_MAX 245.0  // about 0.2 m/s
 #define TICKS_PER_REVOLUTION (1860.0)
-#define K_bias 0.0
+#define K_Lbias 0.0
 #else
-#define K_P 1227.0
-#define K_b 14
-#define PWM_MIN 63.0   // about 0.04 m/s
-#define PWM_MAX 250.0  // about 0.2 m/s
+#define K_P 920.0
+#define K_b 5
+#define PWM_MIN 32.0   // about 0.03m/s
+#define PWM_MAX 170.0  // about 0.18 m/s
 #define TICKS_PER_REVOLUTION (620.0)
-#define K_bias (-10.0)
+#define K_Lbias (0.0)
 #endif
-
-#define PWM_TURN (PWM_MIN)
 
 // Set linear velocity and PWM variable values for each wheel
 float velLeftWheel = 0.0;
@@ -207,11 +206,12 @@ void calc_vel_left_wheel() {
 
   // Update the timestamp
   prevTime = (millis() / 1000.0);
+
 #if PRINT_VEL == 1
   Serial.print("L:");
   Serial.print(velLeftWheel, 3);
-  Serial.print(", ");
-  Serial.println(numOfTicks);
+  //Serial.print(",");
+  //Serial.print(numOfTicks);
 #endif
 }
 
@@ -241,9 +241,9 @@ void calc_vel_right_wheel() {
 
 #if PRINT_VEL == 1
   Serial.print("R:");
-  Serial.print(velRightWheel, 3);
-  Serial.print(", ");
-  Serial.println(numOfTicks);
+  Serial.println(velRightWheel, 3);
+  //Serial.print(", ");
+  //Serial.println(numOfTicks);
 #endif
 }
 
@@ -255,9 +255,9 @@ void calc_pwm_values(float linearx, float angularz) {
 
   if (vLeft >= 0.0) {
     // Calculate the PWM value given the desired velocity
-    pwmLeftReq = int(K_P * vLeft + K_b + K_bias);
+    pwmLeftReq = int(K_P * vLeft + K_b + K_Lbias);
   } else {
-    pwmLeftReq = int(K_P * vLeft - K_b - K_bias);
+    pwmLeftReq = int(K_P * vLeft - K_b - K_Lbias);
   }
   if (vRight >= 0.0) {
     // Calculate the PWM value given the desired velocity
@@ -326,10 +326,12 @@ void set_pwm_values() {
     digitalWrite(BIN2, LOW);
   }
 
-  Serial.print("sReq:");
+#if PRINT_INSPWM == 1
+  Serial.print("rL:");
   Serial.print(pwmLeftReq);
-  Serial.print(":");
-  Serial.println(pwmRightReq);
+  Serial.print(",rR:");
+  Serial.print(pwmRightReq);
+#endif
 
   if ((abs(pwmLeftReq) - pwmLeftOut) > 16)
     pwm_inc = 8;
@@ -347,7 +349,7 @@ void set_pwm_values() {
     // reached calculated PWM, then start PID
     // not stop case, run PID
     if (pwmLeftReq != 0) {
-      trackErrorL = (velLeftWheel - vLeft) * 100.0;
+      trackErrorL = (velLeftWheel - vLeft) * 10.0;
       if (trackPIDLeft.Compute())  //true if PID has triggered
         pwmLeftOut += trackAdjustValueL;
     }
@@ -361,7 +363,7 @@ void set_pwm_values() {
     // reached calculated PWM, then start PID
 
     if (pwmRightReq != 0) {
-      trackErrorR = (velRightWheel - vRight) * 100.0;
+      trackErrorR = (velRightWheel - vRight) * 10.0;
       if (trackPIDRight.Compute())  //true if PID has triggered
         pwmRightOut += trackAdjustValueR;
     }
@@ -371,10 +373,12 @@ void set_pwm_values() {
   pwmLeftOut = (pwmLeftOut > PWM_MAX) ? PWM_MAX : pwmLeftOut;
   pwmRightOut = (pwmRightOut > PWM_MAX) ? PWM_MAX : pwmRightOut;
 
-  Serial.print("sOut:");
+#if PRINT_INSPWM == 1
+  Serial.print(",oL:");
   Serial.print(pwmLeftOut);
-  Serial.print(":");
+  Serial.print(",oR:");
   Serial.println(pwmRightOut);
+#endif
 
 #if PRINT_AVGPWM == 1
   // subtract the last reading:
@@ -470,8 +474,8 @@ void setup() {
   digitalWrite(BIN2, LOW);
   digitalWrite(STBY, HIGH);
 
-  ledcSetup(ENA_CH, 500, 8);  //ENA, channel: 0, 500Hz, 8bits = 256(0 ~ 255)
-  ledcSetup(ENB_CH, 500, 8);  //enB, channel: 1, 500Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENA_CH, 300, 8);  //ENA, channel: 0, 300Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENB_CH, 300, 8);  //enB, channel: 1, 300Hz, 8bits = 256(0 ~ 255)
 
   ledcAttachPin(ENA, ENA_CH);
   ledcAttachPin(ENB, ENB_CH);
@@ -504,10 +508,11 @@ void loop() {
       avgPWML[i] = 0;
       avgPWMR[i] = 0;
     }
+
     //prints the received float number
-    Serial.print("cmd:");
+    Serial.print("Lv:");
     Serial.print(linearx, 3);
-    Serial.print(",");
+    Serial.print(":Av,");
     Serial.println(angularz, 3);
     calc_pwm_values(linearx, angularz);
   }

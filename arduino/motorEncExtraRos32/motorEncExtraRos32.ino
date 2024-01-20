@@ -37,6 +37,8 @@
 
 #define PRINT_VEL 0
 #define PRINT_PIDERR 0
+#define PRINT_AVGPWM 0
+#define PRINT_INSPWM 1
 
 #define USE_IMU 1
 #if USE_IMU == 1
@@ -154,17 +156,15 @@ long currentMillis = 0;
 #define PWM_MIN 43.0   // about 0.03 m/s
 #define PWM_MAX 245.0  // about 0.2 m/s
 #define TICKS_PER_REVOLUTION (1860.0)
-#define K_bias 0.0
+#define K_Lbias 0.0
 #else
-#define K_P 1227.0
-#define K_b 14
-#define PWM_MIN 63.0   // about 0.04 m/s
-#define PWM_MAX 250.0  // about 0.2 m/s
+#define K_P 920.0
+#define K_b 5
+#define PWM_MIN 32.0   // about 0.03m/s
+#define PWM_MAX 170.0  // about 0.18 m/s
 #define TICKS_PER_REVOLUTION (620.0)
-#define K_bias (-10.0)
+#define K_Lbias (0.0)
 #endif
-
-#define PWM_TURN (PWM_MIN)
 
 // Set linear velocity and PWM variable values for each wheel
 float velLeftWheel = 0.0;
@@ -311,6 +311,7 @@ void calc_vel_left_wheel() {
 
   // Update the timestamp
   prevTime = (millis() / 1000.0);
+
 #if PRINT_VEL == 1
   DEBUG_PRINT("L:");
   DEBUG_PRINTY(velLeftWheel, 3);
@@ -364,9 +365,9 @@ void cmd_vel_callback(const void *msgin) {
 
   if (vLeft >= 0.0) {
     // Calculate the PWM value given the desired velocity
-    pwmLeftReq = int(K_P * vLeft + K_b + K_bias);
+    pwmLeftReq = int(K_P * vLeft + K_b + K_Lbias);
   } else {
-    pwmLeftReq = int(K_P * vLeft - K_b - K_bias);
+    pwmLeftReq = int(K_P * vLeft - K_b - K_Lbias);
   }
   if (vRight >= 0.0) {
     // Calculate the PWM value given the desired velocity
@@ -430,10 +431,10 @@ void set_pwm_values() {
     digitalWrite(BIN2, LOW);
   }
 
-#if 0
-  DEBUG_PRINT("sReq:");
+#if PRINT_INSPWM == 1
+  DEBUG_PRINT("rL:");
   DEBUG_PRINT(pwmLeftReq);
-  DEBUG_PRINT(":");
+  DEBUG_PRINT(",rR:");
   DEBUG_PRINTLN(pwmRightReq);
 #endif
 
@@ -453,7 +454,7 @@ void set_pwm_values() {
     // reached calculated PWM, then start PID
     // not stop case, run PID
     if (pwmLeftReq != 0) {
-      trackErrorL = (velLeftWheel - vLeft) * 100.0;
+      trackErrorL = (velLeftWheel - vLeft) * 10.0;
       if (trackPIDLeft.Compute())  //true if PID has triggered
         pwmLeftOut += trackAdjustValueL;
     }
@@ -467,7 +468,7 @@ void set_pwm_values() {
     // reached calculated PWM, then start PID
 
     if (pwmRightReq != 0) {
-      trackErrorR = (velRightWheel - vRight) * 100.0;
+      trackErrorR = (velRightWheel - vRight) * 10.0;
       if (trackPIDRight.Compute())  //true if PID has triggered
         pwmRightOut += trackAdjustValueR;
     }
@@ -477,11 +478,11 @@ void set_pwm_values() {
   pwmLeftOut = (pwmLeftOut > PWM_MAX) ? PWM_MAX : pwmLeftOut;
   pwmRightOut = (pwmRightOut > PWM_MAX) ? PWM_MAX : pwmRightOut;
 
-#if 0
-  DEBUG_PRINT("sOut:");
+#if PRINT_INSPWM == 1
+  DEBUG_PRINT(",oL:");
   DEBUG_PRINT(pwmLeftOut);
-  DEBUG_PRINT(":");
-  DEBUG_PRINTLN(pwmRightOut);
+  DEBUG_PRINT(",oR:");
+  DEBUG_PRINT(pwmRightOut);
 #endif
 
   // PWM output cannot be less than 0
@@ -567,9 +568,9 @@ void setup() {
   digitalWrite(BIN2, LOW);
   digitalWrite(STBY, HIGH);
 
-  ledcSetup(ENA_CH, 500, 8);  //ENA, channel: 0, 500Hz, 8bits = 256(0 ~ 255)
-  ledcSetup(ENB_CH, 500, 8);  //enB, channel: 1, 500Hz, 8bits = 256(0 ~ 255)
-  ledcSetup(BUZZER, 500, 8);  //enB, channel: 1, 500Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENA_CH, 300, 8);  //ENA, channel: 0, 300Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENB_CH, 300, 8);  //enB, channel: 1, 300Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(BUZZER, 300, 8);  //enB, channel: 1, 300Hz, 8bits = 256(0 ~ 255)
 
   ledcAttachPin(ENA, ENA_CH);
   ledcAttachPin(ENB, ENB_CH);

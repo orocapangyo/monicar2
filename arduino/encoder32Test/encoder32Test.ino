@@ -182,8 +182,8 @@ void setup() {
   digitalWrite(BIN2, LOW);
   digitalWrite(STBY, HIGH);
 
-  ledcSetup(ENA_CH, 500, 8);  //ENA, channel: 0, 500Hz, 8bits = 256(0 ~ 255)
-  ledcSetup(ENB_CH, 500, 8);  //enB, channel: 1, 500Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENA_CH, 300, 8);  //ENA, channel: 0, 300Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENB_CH, 300, 8);  //enB, channel: 1, 300Hz, 8bits = 256(0 ~ 255)
 
   ledcAttachPin(ENA, ENA_CH);
   ledcAttachPin(ENB, ENB_CH);

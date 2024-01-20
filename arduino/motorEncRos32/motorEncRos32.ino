@@ -120,11 +120,21 @@ long currentMillis = 0;
 #define TICKS_PER_METER (TICKS_PER_REVOLUTION / (2.0 * 3.141592 * WHEEL_RADIUS))
 #define WHEEL_BASE (0.160)
 
+#if MOTOR_TYPE == MOTOR_60RPM
 #define K_P 1125.0
-#define K_b 3.5
-#define PWM_MIN 40.0   // about 0.05 m/s
-#define PWM_MAX 240.0  // about 0.2 m/s
-#define K_bias 5.0     // left is slow, then add this bias
+#define K_b 30
+#define PWM_MIN 43.0   // about 0.03 m/s
+#define PWM_MAX 245.0  // about 0.2 m/s
+#define TICKS_PER_REVOLUTION (1860.0)
+#define K_Lbias 0.0
+#else
+#define K_P 920.0
+#define K_b 5
+#define PWM_MIN 32.0   // about 0.03m/s
+#define PWM_MAX 170.0  // about 0.18 m/s
+#define TICKS_PER_REVOLUTION (620.0)
+#define K_Lbias (0.0)
+#endif
 
 #define PWM_TURN (PWM_MIN)
 // How much the PWM value can change each cycle
@@ -447,8 +457,8 @@ void setup() {
   digitalWrite(BIN2, LOW);
   digitalWrite(STBY, HIGH);
 
-  ledcSetup(ENA_CH, 500, 8);  //ENA, channel: 0, 500Hz, 8bits = 256(0 ~ 255)
-  ledcSetup(ENB_CH, 500, 8);  //enB, channel: 1, 500Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENA_CH, 300, 8);  //ENA, channel: 0, 300Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENB_CH, 300, 8);  //enB, channel: 1, 300Hz, 8bits = 256(0 ~ 255)
 
   ledcAttachPin(ENA, ENA_CH);
   ledcAttachPin(ENB, ENB_CH);
