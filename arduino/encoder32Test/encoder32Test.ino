@@ -10,17 +10,25 @@
 #define MOTOR_178RPM 2
 #define MOTOR_TYPE MOTOR_60RPM
 
+#define PRINT_VEL 0
+#define PRINT_AVGVEL 0
+#define PRINT_ENC 1
+
 // Encoder output to Arduino Interrupt pin. Tracks the tick count
 #if MOTOR_TYPE == MOTOR_60RPM
 #define ENC_IN_LEFT_A 36
 #define ENC_IN_RIGHT_A 34
 #define ENC_IN_LEFT_B 39
 #define ENC_IN_RIGHT_B 35
+
+#define PWM_MIN 40
 #else
 #define ENC_IN_LEFT_A 39
 #define ENC_IN_RIGHT_A 35
 #define ENC_IN_LEFT_B 36
 #define ENC_IN_RIGHT_B 34
+
+#define PWM_MIN 30
 #endif
 // Motor A, B control
 #define AIN1 26
@@ -48,14 +56,38 @@ boolean Direction_right = true;
 volatile int left_wheel_tick_count = 0;
 volatile int right_wheel_tick_count = 0;
 
-// One-second interval for measurements
-const int interval = 100;
+// Time interval for measurements in milliseconds
+const int INTERVAL = 100;
 long previousMillis = 0;
 long currentMillis = 0;
 
+#if MOTOR_TYPE == MOTOR_60RPM
+#define TICKS_PER_REVOLUTION (1860.0)
+#else
+#define TICKS_PER_REVOLUTION (600.0)
+//left:620, right:580
+#endif
+
+// Number of ticks per wheel revolution. We won't use this in this code.
+// Wheel radius in meters. We won't use this in this code.
+#define WHEEL_RADIUS (0.033)
+#define WHEEL_DIAMETER (WHEEL_RADIUS * 2)
+// Distance from center of the left tire to the center of the right tire in m. We won't use this in this code.
+// Number of ticks a wheel makes moving a linear distance of 1 meter
+// This value was measured manually.
+#define TICKS_PER_METER (TICKS_PER_REVOLUTION / (2.0 * 3.141592 * WHEEL_RADIUS))
+#define WHEEL_BASE (0.160)
+
+// Set linear velocity and PWM variable values for each wheel
+float velLeftWheel = 0.0;
+float velRightWheel = 0.0;
+
 int pwmReq = 0;
 
-#define PWM_MIN 40
+#define NUM_READ 40
+int avgL[NUM_READ], avgR[NUM_READ];
+int readIndex = 0;
+int totalL = 0, totalR = 0;
 
 bool blinkState = false;
 
@@ -110,6 +142,81 @@ void IRAM_ATTR right_wheel_tick() {
       right_wheel_tick_count--;
     }
   }
+}
+
+// Calculate the left wheel linear velocity in m/s every time a
+// tick count message is rpublished on the /left_ticks topic.
+void calc_vel() {
+  int numOfTicks;
+  // Previous timestamp
+  static float prevTime = 0.0;
+  // Variable gets created and initialized the first time a function is called.
+  static int prevLeftCount = 0;
+  static int prevRightCount = 0;
+#if PRINT_AVGVEL == 1
+  float average;
+#endif
+
+  // Manage rollover and rollunder when we get outside the 16-bit integer range
+  numOfTicks = left_wheel_tick_count - prevLeftCount;
+
+  // Calculate wheel velocity in meters per second
+  velLeftWheel = float(numOfTicks) / TICKS_PER_METER / ((millis() / 1000.0) - prevTime);
+  // Keep track of the previous tick count
+  prevLeftCount = left_wheel_tick_count;
+
+  // Manage rollover and rollunder when we get outside the 16-bit integer range
+  numOfTicks = right_wheel_tick_count - prevRightCount;
+
+  // Calculate wheel velocity in meters per second
+  velRightWheel = float(numOfTicks) / TICKS_PER_METER / ((millis() / 1000.0) - prevTime);
+  prevRightCount = right_wheel_tick_count;
+
+  // Update the timestamp
+  prevTime = (millis() / 1000.0);
+
+#if PRINT_VEL == 1
+  //Serial.print("PWM:");
+  //Serial.print(pwmReq);
+  Serial.print("L:");
+  Serial.print(velLeftWheel,3);
+  Serial.print(",R:");
+  Serial.println(velRightWheel,3);
+#endif
+
+#if PRINT_AVGVEL == 1
+  // subtract the last reading:
+  totalL = totalL - avgL[readIndex];
+  // avgL from the sensor:
+  avgL[readIndex] = velLeftWheel*1000;
+  // add the reading to the total:
+  totalL = totalL + avgL[readIndex];
+
+  // calculate the average:
+  average = totalL / NUM_READ;
+  Serial.print("aL:");
+  Serial.print(average);
+
+  // subtract the last reading:
+  totalR = totalR - avgR[readIndex];
+  // read from the sensor:
+  avgR[readIndex] = velRightWheel*1000;
+  // add the reading to the total:
+  totalR = totalR + avgR[readIndex];
+
+  // calculate the average:
+  average = totalR / NUM_READ;
+  Serial.print(",aR:");
+  Serial.println(average);
+
+  // advance to the next position in the array:
+  readIndex = readIndex + 1;
+  // if we're at the end of the array...
+  if (readIndex >= NUM_READ) {
+    // ...wrap around to the beginning:
+    readIndex = 0;
+  }
+#endif
 }
 
 void set_pwm_values() {
@@ -182,8 +289,8 @@ void setup() {
   digitalWrite(BIN2, LOW);
   digitalWrite(STBY, HIGH);
 
-  ledcSetup(ENA_CH, 300, 8);  //ENA, channel: 0, 300Hz, 8bits = 256(0 ~ 255)
-  ledcSetup(ENB_CH, 300, 8);  //enB, channel: 1, 300Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENA_CH, 1000, 8);  //ENA, channel: 0, 100Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENB_CH, 1000, 8);  //enB, channel: 1, 100Hz, 8bits = 256(0 ~ 255)
 
   ledcAttachPin(ENA, ENA_CH);
   ledcAttachPin(ENB, ENB_CH);
@@ -223,16 +330,22 @@ void loop() {
   set_pwm_values();
 
   // If one second has passed, print the number of ticks
-  if (currentMillis - previousMillis > interval) {
+  if (currentMillis - previousMillis > INTERVAL) {
 
     previousMillis = currentMillis;
     // blink LED to indicate activity
     blinkState = !blinkState;
     digitalWrite(LED_BUILTIN, blinkState);
 
+    // Calculate the velocity of the right and left wheels
+    calc_vel();
+
+#if PRINT_ENC == 1
     Serial.print("L:");
     Serial.print(left_wheel_tick_count);
     Serial.print(",R:");
     Serial.println(right_wheel_tick_count);
+#endif
+
   }
 }

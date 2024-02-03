@@ -52,12 +52,15 @@
 #endif
 #endif
 
+// Keep track of the number of wheel ticks
+volatile int left_wheel_tick_count = 0;
+volatile int right_wheel_tick_count = 0;
+
 rcl_publisher_t left_pub, right_pub, quat_pub;
 rcl_subscription_t cmd_vel_sub, ledSub, songSub, lcdSub;
-std_msgs__msg__Int32 right_wheel_tick_count;
-std_msgs__msg__Int32 left_wheel_tick_count;
-geometry_msgs__msg__Twist cmd_vel;
+std_msgs__msg__Int32 msg_right_tick_count, msg_left_tick_count;
 std_msgs__msg__Int32 ledMsg, songMsg, lcdMsg;
+geometry_msgs__msg__Twist cmd_vel;
 geometry_msgs__msg__Quaternion quat_msg;
 
 rclc_executor_t executor;
@@ -92,8 +95,8 @@ double trackAdjustValueR = 0.0;
 double trackSetpointR = 0.0;
 double trackErrorR = 0.0;
 
-double Kp = 2.0;   //Determines how aggressively the PID reacts to the current amount of error (Proportional)
-double Ki = 20.0;  //Determines how aggressively the PID reacts to error over time (Integral)
+double Kp = 0.1;   //Determines how aggressively the PID reacts to the current amount of error (Proportional)
+double Ki = 2.0;  //Determines how aggressively the PID reacts to error over time (Integral)
 double Kd = 0.0;   //Determines how aggressively the PID reacts to the change in error (Derivative)
 
 PID trackPIDLeft(&trackErrorL, &trackAdjustValueL, &trackSetpointL, Kp, Ki, Kd, DIRECT);
@@ -138,6 +141,24 @@ boolean Direction_right = true;
 long previousMillis = 0;
 long currentMillis = 0;
 
+#define INTERVAL 50  //50ms, so 20Hz
+
+#if MOTOR_TYPE == MOTOR_60RPM
+#define K_P 1153.0
+#define K_b 10
+#define PWM_MIN 44.0   // about 0.03 m/s
+#define PWM_MAX 194.0  // about 0.16 m/s
+#define TICKS_PER_REVOLUTION (1860.0)
+#define K_Lbias (0.0)
+#else
+#define K_P 513.0
+#define K_b (-4)
+#define PWM_MIN 16.0   // about 0.04m/s
+#define PWM_MAX 80.0   // about 0.18 m/s
+#define TICKS_PER_REVOLUTION (600.0)
+#define K_Lbias (0.0)
+#endif
+
 // Number of ticks per wheel revolution. We won't use this in this code.
 // Wheel radius in meters. We won't use this in this code.
 #define WHEEL_RADIUS (0.033)
@@ -147,24 +168,6 @@ long currentMillis = 0;
 // This value was measured manually.
 #define TICKS_PER_METER (TICKS_PER_REVOLUTION / (2.0 * 3.141592 * WHEEL_RADIUS))
 #define WHEEL_BASE (0.160)
-
-#define INTERVAL 50  //50ms, so 20Hz
-
-#if MOTOR_TYPE == MOTOR_60RPM
-#define K_P 1125.0
-#define K_b 30
-#define PWM_MIN 43.0   // about 0.03 m/s
-#define PWM_MAX 245.0  // about 0.2 m/s
-#define TICKS_PER_REVOLUTION (1860.0)
-#define K_Lbias 0.0
-#else
-#define K_P 920.0
-#define K_b 5
-#define PWM_MIN 32.0   // about 0.03m/s
-#define PWM_MAX 170.0  // about 0.18 m/s
-#define TICKS_PER_REVOLUTION (620.0)
-#define K_Lbias (0.0)
-#endif
 
 // Set linear velocity and PWM variable values for each wheel
 float velLeftWheel = 0.0;
@@ -244,18 +247,19 @@ void IRAM_ATTR left_wheel_tick() {
   }
 
   if (Direction_left) {
-    if (left_wheel_tick_count.data == encoder_maximum) {
-      left_wheel_tick_count.data = encoder_minimum;
+    if (left_wheel_tick_count == encoder_maximum) {
+      left_wheel_tick_count = encoder_minimum;
     } else {
-      left_wheel_tick_count.data++;
+      left_wheel_tick_count++;
     }
   } else {
-    if (left_wheel_tick_count.data == encoder_minimum) {
-      left_wheel_tick_count.data = encoder_maximum;
+    if (left_wheel_tick_count == encoder_minimum) {
+      left_wheel_tick_count= encoder_maximum;
     } else {
-      left_wheel_tick_count.data--;
+      left_wheel_tick_count--;
     }
   }
+  msg_left_tick_count.data = left_wheel_tick_count;
 }
 
 // Increment the number of ticks
@@ -271,91 +275,99 @@ void IRAM_ATTR right_wheel_tick() {
 
   if (Direction_right) {
 
-    if (right_wheel_tick_count.data == encoder_maximum) {
-      right_wheel_tick_count.data = encoder_minimum;
+    if (right_wheel_tick_count == encoder_maximum) {
+      right_wheel_tick_count = encoder_minimum;
     } else {
-      right_wheel_tick_count.data++;
+      right_wheel_tick_count++;
     }
   } else {
-    if (right_wheel_tick_count.data == encoder_minimum) {
-      right_wheel_tick_count.data = encoder_maximum;
+    if (right_wheel_tick_count == encoder_minimum) {
+      right_wheel_tick_count = encoder_maximum;
     } else {
-      right_wheel_tick_count.data--;
+      right_wheel_tick_count--;
     }
   }
+  msg_right_tick_count.data = right_wheel_tick_count;
 }
 
-/////////////////////// Motor Controller Functions ////////////////////////////
 // Calculate the left wheel linear velocity in m/s every time a
 // tick count message is rpublished on the /left_ticks topic.
-void calc_vel_left_wheel() {
-
+void calc_vel() {
+  int numOfTicks;
   // Previous timestamp
   static float prevTime = 0.0;
-
   // Variable gets created and initialized the first time a function is called.
   static int prevLeftCount = 0;
+  static int prevRightCount = 0;
+#if PRINT_AVGVEL == 1
+  float average;
+#endif
 
   // Manage rollover and rollunder when we get outside the 16-bit integer range
-  int numOfTicks = (65535 + left_wheel_tick_count.data - prevLeftCount) % 65535;
-
-  // If we have had a big jump, it means the tick count has rolled over.
-  if (numOfTicks > 30000) {
-    numOfTicks = 0 - (65535 - numOfTicks);
-  }
+  numOfTicks = left_wheel_tick_count - prevLeftCount;
 
   // Calculate wheel velocity in meters per second
   velLeftWheel = float(numOfTicks) / TICKS_PER_METER / ((millis() / 1000.0) - prevTime);
   // Keep track of the previous tick count
-  prevLeftCount = left_wheel_tick_count.data;
-
-  // Update the timestamp
-  prevTime = (millis() / 1000.0);
-
-#if PRINT_VEL == 1
-  DEBUG_PRINT("L:");
-  DEBUG_PRINTY(velLeftWheel, 3);
-  DEBUG_PRINT(", ");
-  DEBUG_PRINTLN(numOfTicks);
-#endif
-}
-
-// Calculate the right wheel linear velocity in m/s every time a
-// tick count message is published on the /right_ticks topic.
-void calc_vel_right_wheel() {
-
-  // Previous timestamp
-  static float prevTime = 0.0;
-
-  // Variable gets created and initialized the first time a function is called.
-  static int prevRightCount = 0;
+  prevLeftCount = left_wheel_tick_count;
 
   // Manage rollover and rollunder when we get outside the 16-bit integer range
-  int numOfTicks = (65535 + right_wheel_tick_count.data - prevRightCount) % 65535;
-
-  if (numOfTicks > 30000) {
-    numOfTicks = 0 - (65535 - numOfTicks);
-  }
+  numOfTicks = right_wheel_tick_count - prevRightCount;
 
   // Calculate wheel velocity in meters per second
   velRightWheel = float(numOfTicks) / TICKS_PER_METER / ((millis() / 1000.0) - prevTime);
-  prevRightCount = right_wheel_tick_count.data;
+  prevRightCount = right_wheel_tick_count;
 
   // Update the timestamp
   prevTime = (millis() / 1000.0);
 
 #if PRINT_VEL == 1
+  //DEBUG_PRINT("PWM:");
+  //DEBUG_PRINT(pwmReq);
   DEBUG_PRINT("L:");
-  DEBUG_PRINTY(veRightWheel, 3);
-  DEBUG_PRINT(", ");
-  DEBUG_PRINTLN(numOfTicks);
+  DEBUG_PRINT(velLeftWheel,3);
+  DEBUG_PRINT(",R:");
+  DEBUG_PRINTLN(velRightWheel,3);
+#endif
+
+#if PRINT_AVGVEL == 1
+  // subtract the last reading:
+  totalL = totalL - avgL[readIndex];
+  // avgL from the sensor:
+  avgL[readIndex] = velLeftWheel*1000;
+  // add the reading to the total:
+  totalL = totalL + avgL[readIndex];
+
+  // calculate the average:
+  average = totalL / NUM_READ;
+  DEBUG_PRINT("aL:");
+  DEBUG_PRINT(average);
+
+  // subtract the last reading:
+  totalR = totalR - avgR[readIndex];
+  // read from the sensor:
+  avgR[readIndex] = velRightWheel*1000;
+  // add the reading to the total:
+  totalR = totalR + avgR[readIndex];
+
+  // calculate the average:
+  average = totalR / NUM_READ;
+  DEBUG_PRINT(",aR:");
+  DEBUG_PRINTLN(average);
+
+  // advance to the next position in the array:
+  readIndex = readIndex + 1;
+  // if we're at the end of the array...
+  if (readIndex >= NUM_READ) {
+    // ...wrap around to the beginning:
+    readIndex = 0;
+  }
 #endif
 }
 
 // Take the velocity command as input and calculate the PWM values.
 void cmd_vel_callback(const void *msgin) {
   const geometry_msgs__msg__Twist *cmdVel = (const geometry_msgs__msg__Twist *)msgin;
-  float vLeft, vRight;
 
   // Record timestamp of last velocity command received
   lastCmdVelReceived = (millis() / 1000.0);
@@ -568,9 +580,9 @@ void setup() {
   digitalWrite(BIN2, LOW);
   digitalWrite(STBY, HIGH);
 
-  ledcSetup(ENA_CH, 300, 8);  //ENA, channel: 0, 300Hz, 8bits = 256(0 ~ 255)
-  ledcSetup(ENB_CH, 300, 8);  //enB, channel: 1, 300Hz, 8bits = 256(0 ~ 255)
-  ledcSetup(BUZZER, 300, 8);  //enB, channel: 1, 300Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENA_CH, 1000, 8);  //ENA, channel: 0, 1000Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(ENB_CH, 1000, 8);  //enB, channel: 1, 1000Hz, 8bits = 256(0 ~ 255)
+  ledcSetup(BUZZER, 1000, 8);  //enB, channel: 1, 1000Hz, 8bits = 256(0 ~ 255)
 
   ledcAttachPin(ENA, ENA_CH);
   ledcAttachPin(ENB, ENB_CH);
@@ -716,21 +728,15 @@ void loop() {
     previousMillis = currentMillis;
 
     // Calculate the velocity of the right and left wheels
-    calc_vel_left_wheel();
-    calc_vel_right_wheel();
+    calc_vel();
 
-    RCSOFTCHECK(rcl_publish(&left_pub, &left_wheel_tick_count, NULL));
-    RCSOFTCHECK(rcl_publish(&right_pub, &right_wheel_tick_count, NULL));
+    RCSOFTCHECK(rcl_publish(&left_pub, &msg_left_tick_count, NULL));
+    RCSOFTCHECK(rcl_publish(&right_pub, &msg_right_tick_count, NULL));
     RCSOFTCHECK(rcl_publish(&quat_pub, &quat_msg, NULL));
 
     mpu_loop();
 
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-    //buzzer beep if robot move reverse
-    if ((velLeftWheel < 0.0) && (velRightWheel < 0.0))
-      ledcWriteTone(BUZZER_CH, 255);
-    else
-      ledcWriteTone(BUZZER_CH, 0);
   }
 
   // Stop the car if there are no cmd_vel messages

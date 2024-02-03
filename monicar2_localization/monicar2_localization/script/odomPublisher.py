@@ -46,7 +46,7 @@ def quaternion_from_euler(roll, pitch, yaw):
     q.x = cy * cp * sr - sy * sp * cr
     q.y = sy * cp * sr + cy * sp * cr
     q.z = sy * cp * cr - cy * sp * sr
-    return q 
+    return q
 
 class ODOMNode(Node):
 
@@ -87,7 +87,7 @@ class ODOMNode(Node):
         self.left_ticks_sub = self.create_subscription(Int32, 'left_ticks', self.leftTicksCallback, 10)
         self.right_ticks_sub = self.create_subscription(Int32, 'right_ticks', self.rightTicksCallback, 10)
         self.init_sub = self.create_subscription(PoseStamped, 'initial_2d', self.init2dCallback, 10)
-        
+
         self.timer = self.create_timer(self.timer_tick , self.cb_timer)
 
          # Initialize the transform broadcaster
@@ -116,7 +116,7 @@ class ODOMNode(Node):
     def cb_timer(self):
         if self.initPoseRecieved == False:
                 return 1
-        
+
         # Dt calculate
         self.current_time = self.get_clock().now().to_msg()
         ct = self.current_time.sec + (self.current_time.nanosec/1e+9)
@@ -143,12 +143,12 @@ class ODOMNode(Node):
 
             dx = cos(dth) * (self.x-iccX) - sin(dth) * (self.y-iccY) + iccX - self.x
             dy = sin(dth) * (self.x-iccX) + cos(dt) * (self.y-iccY) + iccY - self.y
-        
+
         #x,y,th refresh
-        self.x += dx  
-        self.y += dy 
+        self.x += dx
+        self.y += dy
         self.th =(self.th+dth) %  (2 * pi)
-        
+
         t = TransformStamped()
 
         # Read message content and assign it to
