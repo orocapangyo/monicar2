@@ -89,12 +89,12 @@ long currentMillis = 0;
 #define TICKS_PER_REVOLUTION (1860.0)
 #define K_Lbias 0.0
 #else
-#define K_P 513.0
-#define K_b (-4)
-#define PWM_MIN 16.0   // about 0.04m/s
-#define PWM_MAX 80.0   // about 0.18 m/s
-#define TICKS_PER_REVOLUTION (600.0)
-#define K_Lbias (0.0)
+#define K_P 431.0
+#define K_b 5
+#define PWM_MIN 22.0   // about 0.04m/s
+#define PWM_MAX 82.0   // about 0.18 m/s
+#define TICKS_PER_REVOLUTION (620.0)
+#define K_Lbias (-3)
 #endif
 
 // Number of ticks per wheel revolution. We won't use this in this code.

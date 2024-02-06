@@ -11,8 +11,6 @@
 # euler_from_quaternion, quaternion_from_euler
 # https://gist.github.com/salmagro/2e698ad4fbf9dae40244769c5ab74434
 
-# https://github.com/omorobot/omo_r1mini-foxy/blob/main/omo_r1mini_bringup/omo_r1mini_bringup/scripts/omo_r1mini_mcu_node.py
-
 import math
 from math import sin, cos, pi
 
@@ -32,9 +30,7 @@ wheelradius = 0.033
 
 def quaternion_from_euler(roll, pitch, yaw):
     """
-    Converts euler roll, pitch, yaw to quaternion (w in last place)
-    quat = [x, y, z, w]
-    Bellow should be replaced when porting for ROS 2 Python tf_conversions is done.
+    Converts euler roll, pitch, yaw to quaternion
     """
     cy = math.cos(yaw * 0.5)
     sy = math.sin(yaw * 0.5)
@@ -43,12 +39,11 @@ def quaternion_from_euler(roll, pitch, yaw):
     cr = math.cos(roll * 0.5)
     sr = math.sin(roll * 0.5)
 
-    q = [0] * 4
-    q[0] = cy * cp * sr - sy * sp * cr
-    q[1] = sy * cp * sr + cy * sp * cr
-    q[2] = sy * cp * cr - cy * sp * sr
-    q[3] = cy * cp * cr + sy * sp * sr
-
+    q = Quaternion()
+    q.w = cy * cp * cr + sy * sp * sr
+    q.x = cy * cp * sr - sy * sp * cr
+    q.y = sy * cp * sr + cy * sp * cr
+    q.z = sy * cp * cr - cy * sp * sr
     return q
 
 class ODOMNode(Node):
@@ -94,7 +89,7 @@ class ODOMNode(Node):
         self.timer = self.create_timer(self.timer_tick , self.cb_timer)
 
          # Initialize the transform broadcaster
-        self.pub_OdomTF = TransformBroadcaster(self)
+        self.odom_broadcaster = TransformBroadcaster(self)
 
         # Mark current time
         self.last_time = self.get_clock().now().to_msg()
@@ -122,14 +117,14 @@ class ODOMNode(Node):
 
         # Dt calculate
         self.current_time = self.get_clock().now().to_msg()
-        dt = self.timer_tick
-
-        # Dth calculate
+        ct = self.current_time.sec + (self.current_time.nanosec/1e+9)
+        lt = self.last_time.sec + (self.last_time.nanosec/1e+9)
+        dt = (ct - lt)
+        #Dth calculate
         delta_L = self.left_ticks - self.last_left_ticks
         delta_R = self.right_ticks - self.last_right_ticks
         dl = 2 * pi * wheelradius * delta_L / self.TPR
         dr = 2 * pi * wheelradius * delta_R / self.TPR
-
         dc = (dl + dr) / 2
         dth = (dr - dl) / wheeltrack
 
@@ -150,43 +145,60 @@ class ODOMNode(Node):
         #x,y,th refresh
         self.x += dx
         self.y += dy
-        self.th = (self.th+dth) % (2*pi)
+        self.th =(self.th+dth) %  (2 * pi)
 
-        vx=dx/dt
-        vy=dy/dt
-        vth=dth/dt
+        t = TransformStamped()
 
-        q = quaternion_from_euler(0, 0, self.th)
-        # Set odometry data
+        # Read message content and assign it to
+        # corresponding tf variables
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = 'odom'
+        t.child_frame_id = 'base_footprint'
+
+        # Turtle only exists in 2D, thus we get x and y translation
+        # coordinates from the message and set the z coordinate to 0
+        t.transform.translation.x = self.x
+        t.transform.translation.y = self.y
+        t.transform.translation.z = 0.0
+
+        # For the same reason, turtle can only rotate around one axis
+        # and this why we set rotation in x and y to 0 and obtain
+        # rotation in z axis from the message
+        odom_quat  = quaternion_from_euler(0, 0, self.th)
+        t.transform.rotation.x = odom_quat.x
+        t.transform.rotation.y = odom_quat.y
+        t.transform.rotation.z = odom_quat.z
+        t.transform.rotation.w = odom_quat.w
+
+        # Send the transformation
+        self.odom_broadcaster.sendTransform(t)
+
+        # next, we'll publish the odometry message over ROS
+        if dt>0:
+            vx=dx/dt
+            vy=dy/dt
+            vth=dth/dt
+
         odom = Odometry()
         odom.header.frame_id = "odom"
-        odom.child_frame_id = "base_footprint"
-        odom.header.stamp = self.current_time 
+        odom.header.stamp = self.get_clock().now().to_msg()
+
+        # set the position
         odom.pose.pose.position.x = self.x
         odom.pose.pose.position.y = self.y
         odom.pose.pose.position.z = 0.0
-        odom.pose.pose.orientation.x = q[0]
-        odom.pose.pose.orientation.y = q[1]
-        odom.pose.pose.orientation.z = q[2]
-        odom.pose.pose.orientation.w = q[3]
+        odom.pose.pose.orientation.x = odom_quat.x
+        odom.pose.pose.orientation.y = odom_quat.y
+        odom.pose.pose.orientation.z = odom_quat.z
+        odom.pose.pose.orientation.w = odom_quat.w
 
+        # set the velocity
+        odom.child_frame_id = "base_footprint"
         odom.twist.twist.linear.x = vx
         odom.twist.twist.linear.y = vy
         odom.twist.twist.angular.z = vth
 
         self.odom_pub.publish(odom)
-
-        # Set odomTF data
-        odom_tf = TransformStamped()
-        odom_tf.header.frame_id = odom.header.frame_id
-        odom_tf.child_frame_id = odom.child_frame_id
-        odom_tf.header.stamp = self.current_time 
-
-        odom_tf.transform.translation.x = odom.pose.pose.position.x
-        odom_tf.transform.translation.y = odom.pose.pose.position.y
-        odom_tf.transform.translation.z = odom.pose.pose.position.z
-        odom_tf.transform.rotation = odom.pose.pose.orientation
-        self.pub_OdomTF.sendTransform(odom_tf)
 
         self.last_left_ticks = self.left_ticks
         self.last_right_ticks = self.right_ticks

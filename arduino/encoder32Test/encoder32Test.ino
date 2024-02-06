@@ -64,7 +64,7 @@ long currentMillis = 0;
 #if MOTOR_TYPE == MOTOR_60RPM
 #define TICKS_PER_REVOLUTION (1860.0)
 #else
-#define TICKS_PER_REVOLUTION (600.0)
+#define TICKS_PER_REVOLUTION (620.0)
 //left:620, right:580
 #endif
 

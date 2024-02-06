@@ -11,7 +11,7 @@ fi
 echo "set MOTOR_TYPE to" "$1"
 echo 'set TPR in monicar2_localization/param/robot.yaml'
 if [ "$1" == "MOTOR_178RPM" ]; then
-    sed -i "s/TPR: 1860.0/TPR: 600.0/g" ../monicar2_localization/param/robot.yaml
+    sed -i "s/TPR: 1860.0/TPR: 620.0/g" ../monicar2_localization/param/robot.yaml
 else
     sed -i "s/TPR: 600.0/TPR: 1860.0/g" ../monicar2_localization/param/robot.yaml
 fi
