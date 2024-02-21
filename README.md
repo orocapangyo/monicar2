@@ -21,7 +21,7 @@ ROS code: ZETA7, Alpha, Byungki
 ├── monicar2_imuconverter => Make /imu/data topic, issues static TF
 ├── monicar2_localization => issue odometry, make ekfPose
 ├── monicar2_navigation2  => ros2 navigation2
-├── monicar2_telep        => teleop via keyboard, joystick(=gamepad)
+├── monicar2_teleop       => teleop via keyboard, joystick(=gamepad)
 ├── arduino               => uROS on ESP32, udev rules, motor tester
 (...)
 ├──
@@ -137,7 +137,8 @@ $ ros2 launch monicar2_bringup mcu.launch.py
 $ ros2 run monicar2_teleop teleop_keyboard
 ```
 
-- To conduct SLAM (Try after few seconds from MCU and LiDAR bringup)
+## SLAM with the robot
+To conduct SLAM (Try after few seconds from MCU and LiDAR bringup)
 - Cartographer
 ```bash
 cd {$workspace_path}
