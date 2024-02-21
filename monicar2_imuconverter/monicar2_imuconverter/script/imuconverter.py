@@ -12,25 +12,24 @@ import math
 class ImuNode(Node):
     def __init__(self):
         super().__init__('imu_node')
-        self.declare_parameters( 
+        self.declare_parameters(
             namespace='',
-            parameters=[ 
+            parameters=[
                 ('timer_tick', 0.0),
                 ('useImu', True),
-            ])        
+            ])
 
         self.get_logger().info("Setting Up the Node...")
-        self.timer_tick = self.get_parameter_or('timer_tick', Parameter('timer_tick', Parameter.Type.DOUBLE, 0.05)).get_parameter_value().double_value        
-        self.useImu = self.get_parameter_or('useImu', Parameter('useImu', Parameter.Type.BOOL, True)).get_parameter_value().bool_value        
-
+        self.timer_tick = self.get_parameter_or('timer_tick', Parameter('timer_tick', Parameter.Type.DOUBLE, 0.05)).get_parameter_value().double_value
+        self.useImu = self.get_parameter_or('useImu', Parameter('useImu', Parameter.Type.BOOL, True)).get_parameter_value().bool_value
         print('timer_tick: %s sec, useImu: %s'%
             (self.timer_tick,
             self.useImu)
         )
         # Set subscriber
-        self.quatSub = self.create_subscription(Quaternion, 'quaternion', self.sub_callback, 10)       
-        self.get_logger().info("quaternion subscriber set") 
-        
+        self.quatSub = self.create_subscription(Quaternion, 'quaternion', self.sub_callback, 10)
+        self.get_logger().info("quaternion subscriber set")
+
         # Set publisher
         self.imuPub = self.create_publisher(Imu, 'imu/data', 10)
         self.get_logger().info("Imu publisher set")
@@ -85,10 +84,10 @@ class ImuNode(Node):
 
     def sub_callback(self, msg):
         #self.get_logger().info("Received a /quaternion message!")
-        self.imu_msg.orientation = msg   
+        self.imu_msg.orientation = msg
 
     def cb_timer(self):
-        self.imu_msg.header.frame_id = self.frame_id 
+        self.imu_msg.header.frame_id = self.frame_id
         self.imu_msg.header.stamp = self.get_clock().now().to_msg()
         self.imuPub.publish(self.imu_msg)
 
@@ -121,9 +120,8 @@ class ImuNode(Node):
         t.header.stamp = self.get_clock().now().to_msg()
 
         # imu data publish or null
-        if self.useImu == True:
-            t.transform.rotation =  self.imu_msg.orientation 
-            self.br.sendTransform(t)
+        t.transform.rotation =  self.imu_msg.orientation
+        self.br.sendTransform(t)
 
 def main(args=None):
     rclpy.init(args=args)

@@ -38,7 +38,7 @@
 #define PRINT_VEL 0
 #define PRINT_PIDERR 0
 #define PRINT_AVGPWM 0
-#define PRINT_INSPWM 1
+#define PRINT_INSPWM 0
 
 #define USE_IMU 1
 #if USE_IMU == 1

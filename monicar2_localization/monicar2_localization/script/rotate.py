@@ -14,7 +14,7 @@ PI = 3.1415926535897
 
 def main():
 
-    rclpy.init() 
+    rclpy.init()
     node = rclpy.create_node('rotate_node')
     velocity_publisher = node.create_publisher(Twist, 'cmd_vel', 10)
     vel_msg = Twist()
@@ -28,7 +28,7 @@ def main():
     print("Let's rotate your robot")
     speed = float(input("Input your speed (degrees/sec):"))
     angle = float(input("Type your distance (degrees):"))
-    clockwise = int(input("Clockwise, 0 or 1:"))            
+    clockwise = int(input("Clockwise, 0 or 1:"))
 
     #Converting from angles to radians
     angular_speed = speed*2*PI/360

@@ -19,11 +19,15 @@ from launch_ros.actions import LifecycleNode
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
+
+import lifecycle_msgs.msg
 import os
 
 def generate_launch_description():
     share_dir = get_package_share_directory('monicar2_bringup')
     parameter_file = LaunchConfiguration('params_file')
+    node_name = 'ydlidar_ros2_driver_node'
+
     params_declare = DeclareLaunchArgument('params_file',
                                            default_value=os.path.join(
                                                share_dir, 'param', 'ydlidar.yaml'),

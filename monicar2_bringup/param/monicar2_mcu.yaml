@@ -1,4 +1,0 @@
-monicar2_mcu_node:
-  ros__parameters:
-    dev: "/dev/esp32Nodemcu"
-    baudrate: 115200

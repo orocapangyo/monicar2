@@ -2,10 +2,13 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>monicar2_localization</name>
-  <version>0.9.1</version>
-  <description>Localization package</description>
-  <maintainer email="zeta0707@gmail.com">zeta7</maintainer>
-  <license>TODO: License declaration</license>
+  <version>1.0.0</version>
+  <description>odom publisher</description>
+
+  <license>Apache 2.0</license>
+  <url type="repository">https://github.com/orocapangyo/monicar2</url>
+  <maintainer email="zeta0707@gmail.com">ChangWhan Lee</maintainer>
+  <author email="zeta0707@gmail.com">ChangWhan Lee</author>
 
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>

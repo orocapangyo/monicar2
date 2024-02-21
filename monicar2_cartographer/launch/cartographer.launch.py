@@ -33,7 +33,7 @@ def generate_launch_description():
     cartographer_config_dir = LaunchConfiguration('cartographer_config_dir', default=os.path.join(
                                                   monicar2_cartographer_prefix, 'config'))
     configuration_basename = LaunchConfiguration('configuration_basename',
-                                                 default='monicar2_lidar.lua')
+                                                 default='lidar.lua')
 
     resolution = LaunchConfiguration('resolution', default='0.05')
     publish_period_sec = LaunchConfiguration('publish_period_sec', default='1.0')
