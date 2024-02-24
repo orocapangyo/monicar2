@@ -8,7 +8,7 @@ ROS code: ZETA7, Alpha, Byungki
 
 ## Tested System information
 
-**Jetson Nano 4GB/2GB + RPLidar + ESP32**
+**Jetson Nano 4GB/2GB + RPLidar/YDLidar + ESP32 + DC motor with Encoder**
 * Ubuntu 20.04
 * ROS2 Galactic
 
