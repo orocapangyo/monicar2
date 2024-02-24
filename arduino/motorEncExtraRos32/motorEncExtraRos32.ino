@@ -2,9 +2,9 @@
  * Author: Automatic Addison
  * Website: https://automaticaddison.com
  * Description: ROS node that publishes the accumulated ticks for each wheel
- * (/right_ticks and /left_ticks topics) at regular intervals using the 
- * built-in encoder (forward = positive; reverse = negative). 
- * The node also subscribes to linear & angular velocity commands published on 
+ * (/right_ticks and /left_ticks topics) at regular intervals using the
+ * built-in encoder (forward = positive; reverse = negative).
+ * The node also subscribes to linear & angular velocity commands published on
  * the /cmd_vel topic to drive the robot accordingly.
  * Reference: Practical Robotics in C++ book (ISBN-10 : 9389423465)
  * motor_controller_diff_drive_2.ino.
@@ -28,6 +28,12 @@
 #include <geometry_msgs/msg/quaternion.h>
 
 #include "songlcdled.h"
+
+//refer to extras/library_generation/extra_packages/install/uros_interfaces/include/uros_interfaces/srv
+#include "uros_interfaces/srv/play_anim.h"
+#include "uros_interfaces/srv/play_song.h"
+#include "uros_interfaces/srv/reset_odom.h"
+#include "uros_interfaces/srv/set_led.h"
 
 #define DOMAINID 108
 
@@ -57,16 +63,32 @@ volatile int left_wheel_tick_count = 0;
 volatile int right_wheel_tick_count = 0;
 
 rcl_publisher_t left_pub, right_pub, quat_pub;
-rcl_subscription_t cmd_vel_sub, ledSub, songSub, lcdSub;
+rcl_subscription_t cmd_vel_sub;
 std_msgs__msg__Int32 msg_right_tick_count, msg_left_tick_count;
-std_msgs__msg__Int32 ledMsg, songMsg, lcdMsg;
 geometry_msgs__msg__Twist cmd_vel;
 geometry_msgs__msg__Quaternion quat_msg;
+std_msgs__msg__Int32 ledMsg, songMsg, lcdMsg;
 
-rclc_executor_t executor;
+rcl_node_t node;
 rclc_support_t support;
 rcl_allocator_t allocator;
-rcl_node_t node;
+rclc_executor_t executor;
+rcl_service_t service;
+rcl_wait_set_t wait_set;
+
+const char * service_name = "/playsong";
+const char * service_name = "/setled";
+const char * service_name = "/playanimation";
+
+// Get message type support
+const rosidl_message_type_support_t * type_support1 =
+  ROSIDL_GET_SRV_TYPE_SUPPORT(monicar2_interfaces, srv, playsong);
+// Get message type support
+const rosidl_message_type_support_t * type_support2 =
+  ROSIDL_GET_SRV_TYPE_SUPPORT(monicar2_interfaces, srv, setled);
+// Get message type support
+const rosidl_message_type_support_t * type_support3 =
+  ROSIDL_GET_SRV_TYPE_SUPPORT(monicar2_interfaces, srv, playanimation);
 
 enum states {
   WAITING_AGENT,
@@ -95,9 +117,9 @@ double trackAdjustValueR = 0.0;
 double trackSetpointR = 0.0;
 double trackErrorR = 0.0;
 
-double Kp = 0.1;   //Determines how aggressively the PID reacts to the current amount of error (Proportional)
+double Kp = 0.1;  //Determines how aggressively the PID reacts to the current amount of error (Proportional)
 double Ki = 2.0;  //Determines how aggressively the PID reacts to error over time (Integral)
-double Kd = 0.0;   //Determines how aggressively the PID reacts to the change in error (Derivative)
+double Kd = 0.0;  //Determines how aggressively the PID reacts to the change in error (Derivative)
 
 PID trackPIDLeft(&trackErrorL, &trackAdjustValueL, &trackSetpointL, Kp, Ki, Kd, DIRECT);
 PID trackPIDRight(&trackErrorR, &trackAdjustValueR, &trackSetpointR, Kp, Ki, Kd, DIRECT);
@@ -153,8 +175,8 @@ long currentMillis = 0;
 #else
 #define K_P 431.0
 #define K_b 5
-#define PWM_MIN 22.0   // about 0.04m/s
-#define PWM_MAX 82.0   // about 0.18 m/s
+#define PWM_MIN 22.0  // about 0.04m/s
+#define PWM_MAX 82.0  // about 0.18 m/s
 #define TICKS_PER_REVOLUTION (620.0)
 #define K_Lbias (-3)
 #endif
@@ -234,7 +256,6 @@ void ICACHE_RAM_ATTR dmpDataReady() {
     } \
   } while (0)
 
-/////////////////////// Tick Data Publishing Functions ////////////////////////
 // Increment the number of ticks
 void IRAM_ATTR left_wheel_tick() {
   // Read the value for the encoder for the left wheel
@@ -254,7 +275,7 @@ void IRAM_ATTR left_wheel_tick() {
     }
   } else {
     if (left_wheel_tick_count == encoder_minimum) {
-      left_wheel_tick_count= encoder_maximum;
+      left_wheel_tick_count = encoder_maximum;
     } else {
       left_wheel_tick_count--;
     }
@@ -325,16 +346,16 @@ void calc_vel() {
   //DEBUG_PRINT("PWM:");
   //DEBUG_PRINT(pwmReq);
   DEBUG_PRINT("L:");
-  DEBUG_PRINT(velLeftWheel,3);
+  DEBUG_PRINT(velLeftWheel, 3);
   DEBUG_PRINT(",R:");
-  DEBUG_PRINTLN(velRightWheel,3);
+  DEBUG_PRINTLN(velRightWheel, 3);
 #endif
 
 #if PRINT_AVGVEL == 1
   // subtract the last reading:
   totalL = totalL - avgL[readIndex];
   // avgL from the sensor:
-  avgL[readIndex] = velLeftWheel*1000;
+  avgL[readIndex] = velLeftWheel * 1000;
   // add the reading to the total:
   totalL = totalL + avgL[readIndex];
 
@@ -346,7 +367,7 @@ void calc_vel() {
   // subtract the last reading:
   totalR = totalR - avgR[readIndex];
   // read from the sensor:
-  avgR[readIndex] = velRightWheel*1000;
+  avgR[readIndex] = velRightWheel * 1000;
   // add the reading to the total:
   totalR = totalR + avgR[readIndex];
 
@@ -524,19 +545,25 @@ void set_pwm_values() {
   }
 }
 
-void subled_callback(const void *msgin) {
-  const std_msgs__msg__Int32 *msg = (const std_msgs__msg__Int32 *)msgin;
-  RGB(int(msg->data));
+void subled_callback(const void * request_msg) {
+    // Cast messages to expected types
+  monicar2_interfaces__srv__SetLedRequest * req_in =
+    (monicar2_interfaces__srv__SetLedRequest *) request_msg;
+  RGB(int(req_in->idx));
 }
 
-void subsong_callback(const void *msgin) {
-  const std_msgs__msg__Int32 *msg = (const std_msgs__msg__Int32 *)msgin;
-  playsong(int(msg->data));
+void subsong_callback(const void * request_msg) {
+    // Cast messages to expected types
+  monicar2_interfaces__srv__PPlaySong_Request * req_in =
+    (monicar2_interfaces__srv__PlaySong_Request *) request_msg;
+  playsong(int(req_in->data));
 }
 
-void sublcd_callback(const void *msgin) {
-  const std_msgs__msg__Int32 *msg = (const std_msgs__msg__Int32 *)msgin;
-  showAnimation(int(msg->data));
+void sublcd_callback(const void *msgin, int * res) {
+    // Cast messages to expected types
+  monicar2_interfaces__srv__PlayAnim_Request * req_in =
+    (monicar2_interfaces__srv__PlayAnim_Request *) request_msg;
+  showAnimation(int(req_in->data));
 }
 
 void setup() {
@@ -660,27 +687,6 @@ void setup() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Quaternion),
     "quaternion"));
 
-  // create subscriber
-  RCCHECK(rclc_subscription_init_best_effort(
-    &ledSub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "ledSub"));
-
-  // create subscriber
-  RCCHECK(rclc_subscription_init_best_effort(
-    &songSub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "songSub"));
-
-  // create subscriber
-  RCCHECK(rclc_subscription_init_best_effort(
-    &lcdSub,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "lcdSub"));
-
   // create cmd_vel subscriber
   RCCHECK(rclc_subscription_init_best_effort(
     &cmd_vel_sub,
@@ -688,12 +694,24 @@ void setup() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
     "cmd_vel"));
 
+  RCCHECK(rclc_service_init_best_effort(
+    &service, &node,
+    type_support1, service_name));
+
+  RCCHECK(rclc_service_init_best_effort(
+    &service, &node,
+    type_support2, service_name));
+
+  RCCHECK(rclc_service_init_best_effort(
+    &service, &node,
+    type_support3, service_name));
+
   // create executor
   RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator));
-  RCCHECK(rclc_executor_add_subscription(&executor, &ledSub, &ledMsg, &subled_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &songSub, &songMsg, &subsong_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_subscription(&executor, &lcdSub, &lcdMsg, &sublcd_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_sub, &cmd_vel, cmd_vel_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_service(&executor, &service, &ledMsg, NULL, subled_callback));
+  RCCHECK(rclc_executor_add_service(&executor, &service, &songMsg, NULL, subsong_callback));
+  RCCHECK(rclc_executor_add_service(&executor, &service, &lcdMsg, NULL, sublcd_callback));
 
   DEBUG_PRINTLN("ROS established");
   DEBUG_PRINTLN("Done setup");
