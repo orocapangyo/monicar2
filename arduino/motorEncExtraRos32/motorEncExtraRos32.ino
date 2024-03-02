@@ -39,6 +39,7 @@
 #define PRINT_PIDERR 0
 #define PRINT_AVGPWM 0
 #define PRINT_INSPWM 0
+#define PRINT_QUAT 0
 
 #define USE_IMU 1
 #if USE_IMU == 1
@@ -818,7 +819,7 @@ void mpu_loop() {
   if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) {  // Get the Latest packet
     // display quaternion values in easy matrix form: w x y z
     mpu.dmpGetQuaternion(&q, fifoBuffer);
-#if 0
+#if (PRINT_QUAT == 1)
     DEBUG_PRINT("quat\t");
     DEBUG_PRINT(q.w);
     DEBUG_PRINT("\t");
