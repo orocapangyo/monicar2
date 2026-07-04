@@ -71,7 +71,7 @@ id: jetson
 passwd: jetson
 ```
 Please follow instruction on blow Notion(in Korean)   
-https://zeta7.notion.site/Monicar2-1ae110a410024d2291aba25e90d10875
+https://zeta7.notion.site/monicar2-publish
 
 ### Clone source
 
