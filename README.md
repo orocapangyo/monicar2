@@ -15,17 +15,19 @@ ROS code: ZETA7, Alpha, Byungki
 ## Packages with Brief Explanation
 
 ```
+├── arduino               => uROS on ESP32, udev rules, motor tester
+├── Images
 ├── monicar2_bringup      => robot bringup, start uROS, RPLidar, IMU...
 ├── monicar2_cartographer => SLAM via cartographer
-├── monicar2_description  => Show robot
+├── monicar2_description  => Show robot in RVIZ
 ├── monicar2_imuconverter => Make /imu/data topic, issues static TF
-├── monicar2_localization => issue odometry, make ekfPose
+├── monicar2_localization => issue odometry, then make ekfPose
 ├── monicar2_navigation2  => ros2 navigation2
 ├── monicar2_teleop       => teleop via keyboard, joystick(=gamepad)
-├── arduino               => uROS on ESP32, udev rules, motor tester
+├── script                => bash script for robot config
 (...)
 ├──
-├── Images
+
 ├── LICENSE
 ├── README.md
 ```
@@ -69,7 +71,7 @@ id: jetson
 passwd: jetson
 ```
 Please follow instruction on blow Notion(in Korean)   
-https://zeta7.notion.site/Monicar-II-1ae110a410024d2291aba25e90d10875?pvs=4
+https://zeta7.notion.site/Monicar2-1ae110a410024d2291aba25e90d10875
 
 ### Clone source
 
