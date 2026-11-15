@@ -12,6 +12,43 @@ ROS code: ZETA7, Alpha, Byungki
 * Ubuntu 20.04
 * ROS2 Galactic
 
+## C++ conversion (`cpp` branch)
+
+To reduce CPU load and startup time on the Jetson, the runtime Python nodes were rewritten in C++ (rclcpp).
+Executable names, node names, topics, parameters and TF frames are unchanged, so existing launch files
+and `ros2 run` commands work as before.
+
+| Package | Python (removed) | C++ source | Executable |
+|---|---|---|---|
+| monicar2_imuconverter | `script/imuconverter.py` | `src/imuconverter.cpp` | `imuconverter` |
+| monicar2_teleop | `script/teleop_joy.py` | `src/teleop_joy.cpp` | `teleop_joy` |
+| monicar2_teleop | `script/teleop_keyboard.py` | `src/teleop_keyboard.cpp` | `teleop_keyboard` |
+| monicar2_localization | `script/odomPublisher.py` | `src/odomPublisher.cpp` | `odomPublisher` |
+| monicar2_localization | `script/rviz2ClickTo2d.py` | `src/rviz2ClickTo2d.cpp` | `rviz2ClickTo2d` |
+| monicar2_localization | `script/rviz2ClickTo2dTimer.py` | `src/rviz2ClickTo2d.cpp` (`-DUSE_TIMER`) | `rviz2ClickTo2dTimer` (new) |
+| monicar2_localization | `script/move.py` | `src/move_rotate.cpp` | `move` |
+| monicar2_localization | `script/rotate.py` | `src/move_rotate.cpp` (`-DROTATE`) | `rotate` |
+
+Build-system changes
+- The three packages switched from `ament_python` to `ament_cmake` (`setup.py`, `setup.cfg`, `resource/` and the Python module folders were removed).
+- `CMakeLists.txt` builds the nodes (C++17, Release by default) and installs `launch`, `param`, `rviz` into `share/`.
+- `package.xml` now declares `rclcpp`, `geometry_msgs`, `sensor_msgs`, `std_msgs`, `nav_msgs`, `tf2_ros` dependencies.
+- Python is still used for launch files and the other packages.
+
+Behavior notes
+- Parameter defaults now match the intended values when no YAML is given (`timer_tick` 0.05, `TPR` 1860, `max_*` 0.2) instead of 0.0.
+- `teleop_keyboard` reads `MAX_LIN_VEL`, `MAX_ANG_VEL`, `LIN_VEL_STEP_SIZE`, `ANG_VEL_STEP_SIZE` as optional parameters (defaults are the old constants), and publishes a stop command on CTRL-C.
+- `move` / `rotate` publish a stop command on CTRL-C as well.
+- `teleop_joy` ignores Joy messages with too few axes/buttons instead of crashing.
+
+If you switch an existing workspace from `main` to `cpp`, delete the old build first:
+```bash
+cd {$workspace_path}
+rm -rf build/monicar2_imuconverter build/monicar2_teleop build/monicar2_localization \
+       install/monicar2_imuconverter install/monicar2_teleop install/monicar2_localization
+colcon build --symlink-install
+```
+
 ## Packages with Brief Explanation
 
 ```
