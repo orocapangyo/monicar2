@@ -1,7 +1,7 @@
 ################################################################################
 # Set minimum required version of cmake, project name and compile options
 ################################################################################
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.14)
 project(monicar2_localization)
 
 if(NOT CMAKE_CXX_STANDARD)
@@ -26,23 +26,36 @@ find_package(std_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 
 ################################################################################
-# Build (C++ nodes, converted from Python)
+# Build (C++ nodes, converted from Python) - targets for ROS 2 Jazzy
 ################################################################################
 add_executable(odomPublisher src/odomPublisher.cpp)
-ament_target_dependencies(odomPublisher rclcpp geometry_msgs nav_msgs std_msgs tf2_ros)
+target_link_libraries(odomPublisher PRIVATE
+  rclcpp::rclcpp
+  ${geometry_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  ${std_msgs_TARGETS}
+  tf2_ros::tf2_ros)
 
 add_executable(rviz2ClickTo2d src/rviz2ClickTo2d.cpp)
-ament_target_dependencies(rviz2ClickTo2d rclcpp geometry_msgs)
+target_link_libraries(rviz2ClickTo2d PRIVATE
+  rclcpp::rclcpp
+  ${geometry_msgs_TARGETS})
 
 add_executable(rviz2ClickTo2dTimer src/rviz2ClickTo2d.cpp)
-ament_target_dependencies(rviz2ClickTo2dTimer rclcpp geometry_msgs)
+target_link_libraries(rviz2ClickTo2dTimer PRIVATE
+  rclcpp::rclcpp
+  ${geometry_msgs_TARGETS})
 target_compile_definitions(rviz2ClickTo2dTimer PRIVATE USE_TIMER)
 
 add_executable(move src/move_rotate.cpp)
-ament_target_dependencies(move rclcpp geometry_msgs)
+target_link_libraries(move PRIVATE
+  rclcpp::rclcpp
+  ${geometry_msgs_TARGETS})
 
 add_executable(rotate src/move_rotate.cpp)
-ament_target_dependencies(rotate rclcpp geometry_msgs)
+target_link_libraries(rotate PRIVATE
+  rclcpp::rclcpp
+  ${geometry_msgs_TARGETS})
 target_compile_definitions(rotate PRIVATE ROTATE)
 
 

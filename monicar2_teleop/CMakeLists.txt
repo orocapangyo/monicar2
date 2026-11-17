@@ -1,7 +1,7 @@
 ################################################################################
 # Set minimum required version of cmake, project name and compile options
 ################################################################################
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.14)
 project(monicar2_teleop)
 
 if(NOT CMAKE_CXX_STANDARD)
@@ -25,13 +25,20 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 
 ################################################################################
-# Build (C++ nodes, converted from Python)
+# Build (C++ nodes, converted from Python) - targets for ROS 2 Jazzy
 ################################################################################
 add_executable(teleop_joy src/teleop_joy.cpp)
-ament_target_dependencies(teleop_joy rclcpp geometry_msgs sensor_msgs std_msgs)
+target_link_libraries(teleop_joy PRIVATE
+  rclcpp::rclcpp
+  ${geometry_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${std_msgs_TARGETS})
 
 add_executable(teleop_keyboard src/teleop_keyboard.cpp)
-ament_target_dependencies(teleop_keyboard rclcpp geometry_msgs std_msgs)
+target_link_libraries(teleop_keyboard PRIVATE
+  rclcpp::rclcpp
+  ${geometry_msgs_TARGETS}
+  ${std_msgs_TARGETS})
 
 
 install(TARGETS

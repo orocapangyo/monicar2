@@ -1,7 +1,7 @@
 ################################################################################
 # Set minimum required version of cmake, project name and compile options
 ################################################################################
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.14)
 project(monicar2_imuconverter)
 
 if(NOT CMAKE_CXX_STANDARD)
@@ -25,10 +25,14 @@ find_package(sensor_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 
 ################################################################################
-# Build (C++ nodes, converted from Python)
+# Build (C++ nodes, converted from Python) - targets for ROS 2 Jazzy
 ################################################################################
 add_executable(imuconverter src/imuconverter.cpp)
-ament_target_dependencies(imuconverter rclcpp geometry_msgs sensor_msgs tf2_ros)
+target_link_libraries(imuconverter PRIVATE
+  rclcpp::rclcpp
+  ${geometry_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  tf2_ros::tf2_ros)
 
 
 install(TARGETS

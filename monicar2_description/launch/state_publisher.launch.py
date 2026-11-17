@@ -17,6 +17,11 @@ def generate_launch_description():
         'urdf',
         urdf_file_name)
 
+    # Since Humble, robot_state_publisher no longer accepts the URDF file as an
+    # argument; the URDF text must be passed as the 'robot_description' parameter.
+    with open(urdf, 'r') as infp:
+        robot_desc = infp.read()
+
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_sim_time',
@@ -28,6 +33,6 @@ def generate_launch_description():
             executable='robot_state_publisher',
             name='robot_state_publisher',
             output='screen',
-            parameters=[{'use_sim_time': use_sim_time}],
-            arguments=[urdf])
+            parameters=[{'use_sim_time': use_sim_time,
+                         'robot_description': robot_desc}])
     ])

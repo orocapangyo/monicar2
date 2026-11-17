@@ -9,8 +9,13 @@ ROS code: ZETA7, Alpha, Byungki
 ## Tested System information
 
 **Jetson Nano 4GB/2GB + RPLidar/YDLidar + ESP32 + DC motor with Encoder**
-* Ubuntu 20.04
-* ROS2 Galactic
+* Ubuntu 24.04
+* ROS2 Jazzy (`cpp` branch, migrated from Galactic)
+
+> The `main` branch was developed on Ubuntu 20.04 + ROS2 Galactic.
+> The `cpp` branch targets **ROS2 Jazzy** only (Galactic is EOL).
+> Jazzy needs Ubuntu 24.04. Jetson Nano (JetPack 4, Ubuntu 18.04) cannot run 24.04 natively,
+> so use a Jazzy Docker container on the Nano or a newer board/PC.
 
 ## C++ conversion (`cpp` branch)
 
@@ -34,6 +39,18 @@ Build-system changes
 - `CMakeLists.txt` builds the nodes (C++17, Release by default) and installs `launch`, `param`, `rviz` into `share/`.
 - `package.xml` now declares `rclcpp`, `geometry_msgs`, `sensor_msgs`, `std_msgs`, `nav_msgs`, `tf2_ros` dependencies.
 - Python is still used for launch files and the other packages.
+
+Galactic -> Jazzy migration
+- C++ nodes use Jazzy-style CMake (`target_link_libraries` with `rclcpp::rclcpp`, `${msg_pkg}_TARGETS`) and `tf2_ros/transform_broadcaster.hpp`.
+- `monicar2_description/state_publisher.launch.py`: URDF is passed as the `robot_description` parameter (passing the file as an argument was removed after Galactic).
+- `monicar2_cartographer/occupancy_grid.launch.py`: executable renamed to `cartographer_occupancy_grid_node`.
+- `monicar2_navigation2/param/monicar2.yaml`: rewritten in the Jazzy Nav2 format
+  (`recoveries_server` -> `behavior_server`, `nav2_recoveries/*` -> `nav2_behaviors::*`, `/` -> `::` in plugin names,
+  AMCL `nav2_amcl::DifferentialMotionModel`, `progress_checker_plugins`, BT `navigators` instead of the old `plugin_lib_names` list,
+  new `smoother_server`, `velocity_smoother`, `collision_monitor`, `docking_server` sections).
+  Robot size, speed limits and DWB tuning are kept from the Galactic version.
+- `odomPubInit.launch.py`, `ekfnode.launch.py`: removed a stray trailing comma that turned the parameter path into a tuple.
+- ESP32 firmware: the micro-ROS Arduino library must be the **jazzy** build to talk to the Jazzy `micro_ros_agent`.
 
 Behavior notes
 - Parameter defaults now match the intended values when no YAML is given (`timer_tick` 0.05, `TPR` 1860, `max_*` 0.2) instead of 0.0.
@@ -121,14 +138,12 @@ https://zeta7.notion.site/monicar2-publish
 
 ### Install dependency packages
 
-Following additional packages may be reuqired to be installed.  
-- ros-galactic-cartographer-ros ros-galactic-nav2-map-server 
-- ros-galactic-rqt-robot-steering ros-galactic-imu-tools 
-- ros-galactic-tf2-py ros-galactic-tf2-tools ros-galactic-nav2-bringup ros-galactic-navigation2
+Following additional packages may be required to be installed (ROS2 Jazzy).
 ```bash
-sudo apt install -y ros-galactic-cartographer-ros ros-galactic-nav2-map-server \
-ros-galactic-rqt-robot-steering ros-galactic-imu-tools \
-ros-galactic-tf2-py ros-galactic-tf2-tools ros-galactic-nav2-bringup ros-galactic-navigation2
+sudo apt install -y ros-jazzy-cartographer-ros ros-jazzy-nav2-map-server \
+ros-jazzy-rqt-robot-steering ros-jazzy-imu-tools ros-jazzy-joy \
+ros-jazzy-tf2-tools ros-jazzy-nav2-bringup ros-jazzy-navigation2 \
+ros-jazzy-robot-localization ros-jazzy-slam-toolbox ros-jazzy-robot-state-publisher
 ```
 
 ### Build ROS2 source
@@ -144,7 +159,7 @@ ros-galactic-tf2-py ros-galactic-tf2-tools ros-galactic-nav2-bringup ros-galacti
 
 ```bash
   cd {$workspace_path}
-  ./install/setup.bash
+  source install/setup.bash
 ```
 
 ## Play with the robot

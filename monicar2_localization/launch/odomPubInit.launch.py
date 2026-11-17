@@ -20,7 +20,7 @@ def generate_launch_description():
       get_package_share_directory('monicar2_localization'),
       'param/robot.yaml'
     )
-  ),
+  )
 
   return LaunchDescription([
     IncludeLaunchDescription(
