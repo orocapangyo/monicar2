@@ -8,18 +8,18 @@ ROS code: ZETA7, Alpha, Byungki
 
 ## Tested System information
 
-**Jetson Nano 4GB/2GB + RPLidar/YDLidar + ESP32 + DC motor with Encoder**
+**Raspberry Pi 5 + RPLidar/YDLidar + ESP32 + DC motor with Encoder**
 * Ubuntu 24.04
 * ROS2 Jazzy (`cpp` branch, migrated from Galactic)
 
 > The `main` branch was developed on Ubuntu 20.04 + ROS2 Galactic.
 > The `cpp` branch targets **ROS2 Jazzy** only (Galactic is EOL).
-> Jazzy needs Ubuntu 24.04. Jetson Nano (JetPack 4, Ubuntu 18.04) cannot run 24.04 natively,
-> so use a Jazzy Docker container on the Nano or a newer board/PC.
+> The main board changed from Jetson Nano to **Raspberry Pi 5**, because Jazzy needs Ubuntu 24.04
+> and Jetson Nano (JetPack 4) only supports Ubuntu 18.04. Install Ubuntu 24.04 (64-bit) on the Pi 5.
 
 ## C++ conversion (`cpp` branch)
 
-To reduce CPU load and startup time on the Jetson, the runtime Python nodes were rewritten in C++ (rclcpp).
+To reduce CPU load and startup time on the robot board, the runtime Python nodes were rewritten in C++ (rclcpp).
 Executable names, node names, topics, parameters and TF frames are unchanged, so existing launch files
 and `ros2 run` commands work as before.
 
@@ -117,14 +117,9 @@ motorEncExtraRos/motorEncExtraRos.ino
 </div>
 
 ## Installation
-Please download image from below location   
-https://drive.google.com/file/d/1Jhr4SIeKLocHbJyeximI-j3mksZNgxN3/view?usp=drive_link
+Install Ubuntu 24.04 (64-bit) and ROS2 Jazzy on the Raspberry Pi 5, then follow the steps below.
 
-```bash
-id: jetson
-passwd: jetson
-```
-Please follow instruction on blow Notion(in Korean)   
+Please follow instruction on below Notion(in Korean, written for the previous Jetson Nano + Galactic setup)   
 https://zeta7.notion.site/monicar2-publish
 
 ### Clone source
@@ -175,9 +170,9 @@ cd {$workspace_path}/src/monicar2/monicar2_arduino
 - To teleoperate the robot using **GAMEPAD**
 ```bash
 cd {$workspace_path}
-# jetson , terminal 1
+# Raspberry Pi 5, terminal 1
 $ ros2 launch monicar2_bringup mcu.launch.py
-#jetson or pc terminal 2
+# Raspberry Pi 5 or PC terminal 2
 $ ros2 launch monicar2_teleop teleop_joy.launch.py
 ```
 
@@ -185,9 +180,9 @@ $ ros2 launch monicar2_teleop teleop_joy.launch.py
 
 ```bash
 cd {$workspace_path}
-# jetson , terminal 1
+# Raspberry Pi 5, terminal 1
 $ ros2 launch monicar2_bringup mcu.launch.py
-#jetson or pc terminal 2
+# Raspberry Pi 5 or PC terminal 2
 $ ros2 run monicar2_teleop teleop_keyboard
 ```
 
@@ -201,25 +196,25 @@ $ ros2 launch monicar2_localization ekfPose.launch.py
 # example) teleop_joy, not using description
 $ ros2 launch monicar2_localization ekfPose.launch.py use_joy:='true' use_des:='false'
 
-#terminal #2, recommand PC than Jetson
+#terminal #2, recommend PC rather than Raspberry Pi 5
 $ ros2 launch monicar2_cartographer cartographer.launch.py
-#terminal #3, recommand PC than Jetson
+#terminal #3, recommend PC rather than Raspberry Pi 5
 $ ros2 launch monicar2_cartographer cartographer_rviz.launch.py
 ```
 - Slam_toolbox
 ```bash
-#terminal #1, Jetson
+#terminal #1, Raspberry Pi 5
 cd {$workspace_path}
 $ ros2 launch monicar2_localization ekfPose.launch.py
 # or using another options
 # example) teleop_joy, not using description
 $ ros2 launch monicar2_localization ekfPose.launch.py use_joy:='true' use_des:='false'
 
-#terminal #2,recommand PC than Jetson
+#terminal #2,recommend PC rather than Raspberry Pi 5
 $ ros2 launch nav2_bringup navigation_launch.py
-#terminal #3,recommand PC than Jetson
+#terminal #3,recommend PC rather than Raspberry Pi 5
 $ ros2 launch slam_toolbox online_async_launch.py
-#terminal #4, recommand PC than Jetson
+#terminal #4, recommend PC rather than Raspberry Pi 5
 $ ros2 launch monicar2_navigation2 slamtoolbox_rviz.launch.py
 ```
 
@@ -232,15 +227,15 @@ ros2 run nav2_map_server map_saver_cli -f map
 
 - To conduct path planning & following, close all previsous launch.py
 ```bash
-#terminal #1, Jetson
+#terminal #1, Raspberry Pi 5
 cd {$workspace_path}
 $ ros2 launch monicar2_localization ekfPose.launch.py initPose:='false'
 # or using another options
 # example) not using description
 $ ros2 launch monicar2_localization ekfPose.launch.py initPose='false' use_des:='false'
 
-#terminal #2,recommand PC than Jetson
+#terminal #2,recommend PC rather than Raspberry Pi 5
 $ ros2 launch monicar2_navigation2 navigation2.launch.py map:=./mymap.yaml
-#terminal #3, recommand PC than Jetson
+#terminal #3, recommend PC rather than Raspberry Pi 5
 $ ros2 launch monicar2_navigation2 navigation2_rviz.launch.py
 ```
